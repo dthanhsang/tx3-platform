@@ -658,259 +658,226 @@ class TX3ControllerApp(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("TX3 Remote Management Platform - Full Control & Auto VPN")
-        self.resize(1200, 780)
+        self.setWindowTitle("TX3 Remote Management Platform - Facebook Modern Theme")
+        self.resize(1320, 860)
 
-        # Ultra-Modern Web SaaS Dashboard Design System (Glassmorphic & Flat Minimalist)
+        # Facebook Design System Stylesheet
         self.setStyleSheet("""
             QMainWindow {
-                background-color: #090d16;
+                background-color: #f0f2f5;
             }
             QWidget {
-                color: #f3f4f6;
-                font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                color: #050505;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
                 font-size: 12px;
             }
 
-            /* --- Custom Web-like Scrollbars --- */
+            /* --- Custom Slim Scrollbars --- */
             QScrollBar:vertical {
-                background-color: #090d16;
+                background-color: #f0f2f5;
                 width: 8px;
                 margin: 0px;
                 border-radius: 4px;
             }
             QScrollBar::handle:vertical {
-                background-color: #1f2937;
+                background-color: #bcc0c4;
                 min-height: 20px;
                 border-radius: 4px;
             }
             QScrollBar::handle:vertical:hover {
-                background-color: #374151;
+                background-color: #8a8d91;
             }
             QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
                 height: 0px;
             }
-            QScrollBar:horizontal {
-                background-color: #090d16;
-                height: 8px;
-                margin: 0px;
-                border-radius: 4px;
-            }
-            QScrollBar::handle:horizontal {
-                background-color: #1f2937;
-                min-width: 20px;
-                border-radius: 4px;
-            }
-            QScrollBar::handle:horizontal:hover {
-                background-color: #374151;
-            }
-            QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
-                width: 0px;
-            }
 
-            /* --- Top Navigation Header Bar --- */
+            /* --- Header Bar --- */
             QFrame#headerFrame {
-                background-color: #111827;
-                border-bottom: 1px solid #1f2937;
+                background-color: #ffffff;
+                border-bottom: 1px solid #e4e6eb;
                 max-height: 52px;
                 min-height: 52px;
-                border-top-left-radius: 12px;
-                border-top-right-radius: 12px;
+                border-radius: 8px;
             }
 
-            /* --- Cards & GroupBoxes (SaaS Elevation) --- */
+            /* --- Facebook GroupBoxes / Cards --- */
             QGroupBox {
-                background-color: #111827;
-                border: 1px solid #1f2937;
-                border-radius: 12px;
+                background-color: #ffffff;
+                border: 1px solid #e4e6eb;
+                border-radius: 10px;
                 margin-top: 14px;
-                font-weight: 600;
+                font-weight: bold;
                 font-size: 12px;
-                color: #38bdf8;
+                color: #1877f2;
                 padding-top: 16px;
             }
             QGroupBox::title {
                 subcontrol-origin: margin;
-                left: 14px;
-                padding: 3px 12px;
-                color: #38bdf8;
-                background-color: #090d16;
-                border: 1px solid #1f2937;
-                border-radius: 8px;
-                font-weight: 700;
-                letter-spacing: 0.5px;
+                left: 12px;
+                padding: 2px 10px;
+                color: #1877f2;
+                background-color: #e7f3ff;
+                border: 1px solid #becd4;
+                border-radius: 6px;
+                font-weight: bold;
             }
 
-            /* --- Form Inputs (Web Input Controls) --- */
+            /* --- Form Inputs --- */
             QLineEdit {
-                background-color: #1f2937;
-                border: 1px solid #374151;
-                border-radius: 8px;
-                padding: 8px 12px;
-                color: #f9fafb;
+                background-color: #f0f2f5;
+                border: 1px solid #ccd0d5;
+                border-radius: 6px;
+                padding: 7px 10px;
+                color: #050505;
                 font-size: 12px;
-                selection-background-color: #2563eb;
+                selection-background-color: #1877f2;
             }
             QLineEdit:focus {
-                border: 1px solid #38bdf8;
-                background-color: #111827;
+                border: 1px solid #1877f2;
+                background-color: #ffffff;
             }
 
-            /* --- Modern Buttons --- */
+            /* --- Buttons --- */
             QPushButton {
-                background-color: #2563eb;
+                background-color: #1877f2;
                 color: #ffffff;
-                border-radius: 8px;
-                padding: 8px 18px;
-                font-weight: 600;
+                border-radius: 6px;
+                padding: 7px 14px;
+                font-weight: bold;
                 font-size: 12px;
-                border: 1px solid rgba(255, 255, 255, 0.08);
+                border: none;
             }
             QPushButton:hover {
-                background-color: #3b82f6;
+                background-color: #166fe5;
             }
             QPushButton:pressed {
-                background-color: #1d4ed8;
+                background-color: #1465d2;
             }
             QPushButton:disabled {
-                background-color: #1f2937;
-                color: #4b5563;
-                border: 1px solid #111827;
+                background-color: #e4e6eb;
+                color: #bcc0c4;
             }
             QPushButton#btnSecondary {
-                background-color: #1f2937;
-                color: #f3f4f6;
-                border: 1px solid #374151;
+                background-color: #e4e6eb;
+                color: #050505;
+                border: none;
             }
             QPushButton#btnSecondary:hover {
-                background-color: #374151;
-                color: #ffffff;
-                border: 1px solid #4b5563;
+                background-color: #d8dadf;
             }
             QPushButton#btnVpn {
-                background-color: #0284c7;
+                background-color: #42b72a;
                 color: #ffffff;
                 font-weight: bold;
-                border-radius: 8px;
+                border-radius: 6px;
+                padding: 8px 16px;
             }
             QPushButton#btnVpn:hover {
-                background-color: #0369a1;
+                background-color: #36a420;
             }
             QPushButton#btnSaveName {
-                background-color: #2563eb;
+                background-color: #1877f2;
                 color: #ffffff;
                 font-weight: bold;
-                border-radius: 8px;
             }
             QPushButton#btnRemote {
-                background-color: #10b981;
+                background-color: #42b72a;
                 font-size: 13px;
-                padding: 10px 20px;
+                padding: 10px 18px;
                 font-weight: bold;
                 border-radius: 8px;
-                border: 1px solid rgba(255, 255, 255, 0.1);
             }
             QPushButton#btnRemote:hover {
-                background-color: #059669;
+                background-color: #36a420;
             }
             QPushButton#btnPush {
                 background-color: #8b5cf6;
-                padding: 9px;
+                padding: 8px;
                 font-weight: bold;
-                border-radius: 8px;
-            }
-            QPushButton#btnPush:hover {
-                background-color: #7c3aed;
+                border-radius: 6px;
             }
 
-            /* --- Data Table (Web Dashboard Grid) --- */
+            /* --- Data Table --- */
             QTableWidget {
-                background-color: #111827;
-                border: 1px solid #1f2937;
-                border-radius: 12px;
-                gridline-color: #1f2937;
-                color: #f9fafb;
-                selection-background-color: rgba(56, 189, 248, 0.2);
-                selection-color: #ffffff;
+                background-color: #ffffff;
+                border: 1px solid #e4e6eb;
+                border-radius: 8px;
+                gridline-color: #f0f2f5;
+                color: #050505;
+                selection-background-color: #e7f3ff;
+                selection-color: #1877f2;
                 outline: none;
             }
             QTableWidget::item {
-                padding: 8px 12px;
-                border-bottom: 1px solid #1f2937;
+                padding: 6px 10px;
+                border-bottom: 1px solid #f0f2f5;
             }
             QTableWidget::item:selected {
-                background-color: #1e3a5f;
-                color: #38bdf8;
-                font-weight: 600;
+                background-color: #e7f3ff;
+                color: #1877f2;
+                font-weight: bold;
             }
             QHeaderView::section {
-                background-color: #090d16;
-                color: #9ca3af;
-                padding: 10px 14px;
-                font-weight: 700;
+                background-color: #f0f2f5;
+                color: #65676b;
+                padding: 8px 10px;
+                font-weight: bold;
                 border: none;
-                border-bottom: 2px solid #1f2937;
-                text-transform: uppercase;
-                letter-spacing: 0.5px;
+                border-bottom: 2px solid #e4e6eb;
             }
 
-            /* --- Console Output Terminal --- */
+            /* --- Console Terminal --- */
             QTextEdit#txtConsole {
-                background-color: #030712;
+                background-color: #1c1e21;
                 color: #38bdf8;
-                font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+                font-family: 'Consolas', 'Courier New', monospace;
                 font-size: 11px;
-                border: 1px solid #1f2937;
-                border-radius: 10px;
+                border: 1px solid #303338;
+                border-radius: 8px;
                 padding: 8px;
             }
 
             /* --- Status Bar --- */
             QStatusBar {
-                background-color: #111827;
-                color: #9ca3af;
-                border-top: 1px solid #1f2937;
+                background-color: #ffffff;
+                color: #65676b;
+                border-top: 1px solid #e4e6eb;
                 font-size: 11px;
-                min-height: 28px;
-                max-height: 28px;
             }
 
             /* --- Checkbox Controls --- */
             QCheckBox {
-                color: #f3f4f6;
-                spacing: 8px;
+                color: #050505;
+                spacing: 6px;
             }
             QCheckBox::indicator {
                 width: 16px;
                 height: 16px;
-                border-radius: 5px;
-                border: 1px solid #374151;
-                background-color: #1f2937;
+                border-radius: 4px;
+                border: 1px solid #ccd0d5;
+                background-color: #f0f2f5;
             }
             QCheckBox::indicator:checked {
-                background-color: #2563eb;
-                border: 1px solid #38bdf8;
-            }
-            QCheckBox::indicator:hover {
-                border: 1px solid #4b5563;
+                background-color: #1877f2;
+                border: 1px solid #1877f2;
             }
         """)
 
         main_widget = QWidget()
         self.setCentralWidget(main_widget)
         main_layout = QVBoxLayout(main_widget)
-        main_layout.setContentsMargins(8, 6, 8, 6)
-        main_layout.setSpacing(6)
+        main_layout.setContentsMargins(10, 8, 10, 8)
+        main_layout.setSpacing(8)
 
         # Header Bar
         header = QFrame()
         header.setObjectName("headerFrame")
         header_layout = QHBoxLayout(header)
-        header_layout.setContentsMargins(12, 4, 12, 4)
+        header_layout.setContentsMargins(14, 4, 14, 4)
 
-        title_label = QLabel("📺 TX3 REMOTE MANAGEMENT PLATFORM")
+        title_label = QLabel("👍 TX3 REMOTE MANAGEMENT PLATFORM (FACEBOOK THEME)")
         title_label.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        title_label.setStyleSheet("color: #38bdf8;")
+        title_label.setStyleSheet("color: #1877f2;")
         header_layout.addWidget(title_label)
         header_layout.addStretch()
 
@@ -924,41 +891,37 @@ class TX3ControllerApp(QMainWindow):
         self.main_tabs = QTabWidget()
         self.main_tabs.setStyleSheet("""
             QTabWidget::pane {
-                border: 1px solid #1f2937;
-                background-color: #111827;
-                border-radius: 12px;
+                border: 1px solid #e4e6eb;
+                background-color: #ffffff;
+                border-radius: 10px;
             }
             QTabBar::tab {
-                background-color: #090d16;
-                color: #9ca3af;
-                font-weight: 600;
+                background-color: #f0f2f5;
+                color: #65676b;
+                font-weight: bold;
                 font-size: 13px;
-                padding: 10px 26px;
-                border-top-left-radius: 10px;
-                border-top-right-radius: 10px;
-                border: 1px solid #1f2937;
+                padding: 8px 22px;
+                border-top-left-radius: 8px;
+                border-top-right-radius: 8px;
+                border: 1px solid #e4e6eb;
                 border-bottom: none;
-                margin-right: 6px;
+                margin-right: 4px;
             }
             QTabBar::tab:selected {
-                background-color: #111827;
-                color: #38bdf8;
-                border-top: 3px solid #38bdf8;
-                font-weight: 700;
-            }
-            QTabBar::tab:hover:!selected {
-                background-color: #1f2937;
-                color: #f9fafb;
+                background-color: #ffffff;
+                color: #1877f2;
+                border-top: 3px solid #1877f2;
+                font-weight: bold;
             }
         """)
 
         # Tab 1 Widget (Remote Control & Device Management)
         tab_remote_widget = QWidget()
         tab_remote_layout = QVBoxLayout(tab_remote_widget)
-        tab_remote_layout.setContentsMargins(4, 4, 4, 4)
+        tab_remote_layout.setContentsMargins(6, 6, 6, 6)
 
-        # Main Splitter
-        splitter = QSplitter(Qt.Horizontal)
+        # Main Horizontal Splitter
+        main_splitter = QSplitter(Qt.Horizontal)
 
         # Left Panel (Login & Device List)
         left_widget = QWidget()
@@ -986,7 +949,7 @@ class TX3ControllerApp(QMainWindow):
         left_layout.addWidget(self.login_box)
 
         # 2. Devices Group
-        devices_box = QGroupBox("2. Danh sách thiết bị Android Box (Double click tên Box để đổi tên)")
+        devices_box = QGroupBox("2. Danh sách thiết bị Android Box")
         devices_layout = QVBoxLayout(devices_box)
         devices_layout.setContentsMargins(10, 10, 10, 8)
         devices_layout.setSpacing(6)
@@ -1026,13 +989,20 @@ class TX3ControllerApp(QMainWindow):
         devices_layout.addWidget(self.table_devices)
         left_layout.addWidget(devices_box)
 
-        splitter.addWidget(left_widget)
+        main_splitter.addWidget(left_widget)
 
-        # Right Panel (Control, File Transfer, VPN & Console Log)
-        right_widget = QWidget()
-        right_layout = QVBoxLayout(right_widget)
-        right_layout.setContentsMargins(0, 0, 0, 0)
-        right_layout.setSpacing(6)
+        # Right Panel (Divided into Vertical Splitter: Controls ScrollArea on Top, Console Log on Bottom)
+        right_splitter = QSplitter(Qt.Vertical)
+
+        # Scrollable Area for Control Panels
+        controls_scroll = QScrollArea()
+        controls_scroll.setWidgetResizable(True)
+        controls_scroll.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+
+        controls_container = QWidget()
+        controls_layout = QVBoxLayout(controls_container)
+        controls_layout.setContentsMargins(0, 0, 4, 0)
+        controls_layout.setSpacing(10)
 
         # 3. Selected Device Controls & Edit Name
         info_box = QGroupBox("3. Điều khiển & Sửa tên Box")
@@ -1041,8 +1011,8 @@ class TX3ControllerApp(QMainWindow):
         info_layout.setSpacing(6)
 
         self.lbl_selected_name = QLabel("Chưa chọn thiết bị nào")
-        self.lbl_selected_name.setFont(QFont("Segoe UI", 12, QFont.Bold))
-        self.lbl_selected_name.setStyleSheet("color: #050505;")
+        self.lbl_selected_name.setFont(QFont("Segoe UI", 11, QFont.Bold))
+        self.lbl_selected_name.setStyleSheet("color: #1877f2;")
         info_layout.addWidget(self.lbl_selected_name)
 
         # Edit Box Name & Replace MAC Layout
@@ -1071,12 +1041,11 @@ class TX3ControllerApp(QMainWindow):
         info_layout.addWidget(self.lbl_selected_detail)
 
         # Master-Slave Sync Checkbox
-        self.chk_master_slave = QCheckBox("🎯 Bật Chế độ Điều khiển Đồng Bộ Hàng Loạt (1 Master Màn Lớn + N Slaves)")
-        self.chk_master_slave.setStyleSheet("color: #38bdf8; font-weight: bold;")
+        self.chk_master_slave = QCheckBox("🎯 Bật Chế độ Điều khiển Đồng Bộ Hàng Loạt (1 Master + N Slaves)")
+        self.chk_master_slave.setStyleSheet("color: #1877f2; font-weight: bold;")
         self.chk_master_slave.setChecked(True)
         info_layout.addWidget(self.chk_master_slave)
 
-        info_layout.addSpacing(2)
         self.btn_remote = QPushButton("▶ Bắt đầu Remote Scrcpy (Màn hình Realtime)")
         self.btn_remote.setObjectName("btnRemote")
         self.btn_remote.setEnabled(False)
@@ -1180,8 +1149,7 @@ class TX3ControllerApp(QMainWindow):
         sync_panel_layout.addLayout(gesture_row)
 
         info_layout.addWidget(sync_panel_box)
-
-        right_layout.addWidget(info_box)
+        controls_layout.addWidget(info_box)
 
         # 4. File Transfer & Batch ADB Console Group
         file_box = QGroupBox("4. Truyền File & Điều khiển ADB Hàng Loạt")
@@ -1224,8 +1192,13 @@ class TX3ControllerApp(QMainWindow):
         self.btn_batch_clear.setObjectName("btnSecondary")
         self.btn_batch_clear.clicked.connect(self.run_batch_clear_cache)
 
+        self.btn_disable_yt_voice_batch = QPushButton("🔇 Tắt Tiếng Đọc Youtube")
+        self.btn_disable_yt_voice_batch.setObjectName("btnSecondary")
+        self.btn_disable_yt_voice_batch.clicked.connect(self.run_batch_disable_yt_voice)
+
         adb_cmd_layout.addWidget(self.btn_batch_reboot)
         adb_cmd_layout.addWidget(self.btn_batch_clear)
+        adb_cmd_layout.addWidget(self.btn_disable_yt_voice_batch)
         file_layout.addLayout(adb_cmd_layout)
 
         # Custom Shell Command
@@ -1239,13 +1212,40 @@ class TX3ControllerApp(QMainWindow):
         custom_cmd_layout.addWidget(self.btn_run_custom_adb)
         file_layout.addLayout(custom_cmd_layout)
 
-        right_layout.addWidget(file_box)
+        controls_layout.addWidget(file_box)
 
-        # 4b. Telegram Notification Settings Box
-        tele_box = QGroupBox("🔔 Cấu hình Cảnh báo Telegram Bot")
+        # 5. WireGuard VPN & Tools Status Box (Prominently placed before Telegram)
+        tools_box = QGroupBox("5. Môi trường & Quản lý WireGuard VPN Status")
+        tools_layout = QVBoxLayout(tools_box)
+        tools_layout.setContentsMargins(10, 10, 10, 10)
+        tools_layout.setSpacing(6)
+
+        self.lbl_tools_status = QLabel("Đang kiểm tra Scrcpy / ADB / WireGuard...")
+        self.lbl_tools_status.setStyleSheet("color: #050505; font-weight: 600; font-size: 12px;")
+        self.lbl_tools_status.setWordWrap(True)
+        tools_layout.addWidget(self.lbl_tools_status)
+
+        tools_btn_layout = QHBoxLayout()
+        self.btn_toggle_vpn = QPushButton("⚡ BẬT / TẮT WIREGUARD VPN NETWORK")
+        self.btn_toggle_vpn.setObjectName("btnVpn")
+        self.btn_toggle_vpn.setMinimumHeight(38)
+        self.btn_toggle_vpn.clicked.connect(self.toggle_wireguard_vpn)
+        tools_btn_layout.addWidget(self.btn_toggle_vpn)
+
+        self.btn_check_deps = QPushButton("⚙ Cài đặt Scrcpy/ADB")
+        self.btn_check_deps.setObjectName("btnSecondary")
+        self.btn_check_deps.setMinimumHeight(38)
+        self.btn_check_deps.clicked.connect(self.auto_check_and_install_deps)
+        tools_btn_layout.addWidget(self.btn_check_deps)
+
+        tools_layout.addLayout(tools_btn_layout)
+        controls_layout.addWidget(tools_box)
+
+        # 6. Telegram Notification Settings Box
+        tele_box = QGroupBox("6. Cấu hình Cảnh báo Telegram Bot")
         tele_layout = QVBoxLayout(tele_box)
         tele_layout.setContentsMargins(10, 8, 10, 8)
-        tele_layout.setSpacing(4)
+        tele_layout.setSpacing(6)
 
         t_row1 = QHBoxLayout()
         t_row1.addWidget(QLabel("Bot Token:"))
@@ -1270,41 +1270,21 @@ class TX3ControllerApp(QMainWindow):
         t_row2.addWidget(self.btn_test_tele)
         tele_layout.addLayout(t_row2)
 
-        right_layout.addWidget(tele_box)
+        controls_layout.addWidget(tele_box)
 
-        # 5. Network & Tools Status Box
-        tools_box = QGroupBox("5. Môi trường & WireGuard VPN Status")
-        tools_layout = QVBoxLayout(tools_box)
-        tools_layout.setContentsMargins(10, 10, 10, 10)
-        tools_layout.setSpacing(6)
+        controls_scroll.setWidget(controls_container)
+        right_splitter.addWidget(controls_scroll)
 
-        self.lbl_tools_status = QLabel("Đang kiểm tra Scrcpy / ADB / WireGuard...")
-        self.lbl_tools_status.setStyleSheet("color: #65676b; font-size: 11px;")
-        tools_layout.addWidget(self.lbl_tools_status)
-
-        tools_btn_layout = QHBoxLayout()
-        self.btn_toggle_vpn = QPushButton("⚡ Bật / Tắt WireGuard VPN")
-        self.btn_toggle_vpn.setObjectName("btnVpn")
-        self.btn_toggle_vpn.clicked.connect(self.toggle_wireguard_vpn)
-        tools_btn_layout.addWidget(self.btn_toggle_vpn)
-
-        self.btn_check_deps = QPushButton("⚙ Cài đặt Scrcpy/ADB")
-        self.btn_check_deps.setObjectName("btnSecondary")
-        self.btn_check_deps.clicked.connect(self.auto_check_and_install_deps)
-        tools_btn_layout.addWidget(self.btn_check_deps)
-
-        tools_layout.addLayout(tools_btn_layout)
-        right_layout.addWidget(tools_box)
-
-        # 6. Console Log & System Activity
-        log_box = QGroupBox("6. Nhật ký hệ thống & ADB Commands Console Log")
+        # 7. Dedicated Console Log & System Activity (Bottom Splitter Panel)
+        log_box = QGroupBox("7. Nhật ký hệ thống & ADB Commands Console Log")
         log_layout = QVBoxLayout(log_box)
-        log_layout.setContentsMargins(10, 10, 10, 8)
-        log_layout.setSpacing(6)
+        log_layout.setContentsMargins(8, 8, 8, 6)
+        log_layout.setSpacing(4)
 
         self.txt_console = QTextEdit()
         self.txt_console.setObjectName("txtConsole")
         self.txt_console.setReadOnly(True)
+        self.txt_console.setMinimumHeight(150)
         log_layout.addWidget(self.txt_console)
 
         log_btn_layout = QHBoxLayout()
@@ -1320,12 +1300,13 @@ class TX3ControllerApp(QMainWindow):
         log_btn_layout.addStretch()
         log_layout.addLayout(log_btn_layout)
 
-        right_layout.addWidget(log_box)
+        right_splitter.addWidget(log_box)
+        right_splitter.setSizes([520, 240])
 
-        splitter.addWidget(right_widget)
-        splitter.setSizes([650, 470])
+        main_splitter.addWidget(right_splitter)
+        main_splitter.setSizes([520, 780])
 
-        tab_remote_layout.addWidget(splitter)
+        tab_remote_layout.addWidget(main_splitter)
         self.main_tabs.addTab(tab_remote_widget, "📱 TAB 1: ĐIỀU KHIỂN & QUẢN LÝ THIẾT BỊ")
 
         self.tab_rom_builder = RomBuilderTab(log_callback=self.log)
@@ -1348,10 +1329,7 @@ class TX3ControllerApp(QMainWindow):
         # Auto check local tools on startup
         QTimer.singleShot(500, self.detect_local_tools)
 
-        # Initial Welcome Log
-        self.log("Khởi động phần mềm TX3 Remote Control Platform.", "INFO")
-
-    def log(self, message, level="INFO"):
+        # Initial Welcome Log    def log(self, message, level="INFO"):
         now_str = datetime.now().strftime("%H:%M:%S")
         color_map = {
             "INFO": "#9cdcfe",      # Light Blue
