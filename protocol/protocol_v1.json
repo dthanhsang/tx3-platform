@@ -1,0 +1,318 @@
+{
+  "protocol": "TX3 Remote Management Protocol",
+  "version": 1,
+  "transport": "WebSocket over WireGuard",
+  
+  "message_format": {
+    "type": "string (message type)",
+    "id": "string (unique message ID, UUIDv4)",
+    "timestamp": "int64 (Unix ms)",
+    "payload": "object (type-specific data)"
+  },
+
+  "categories": {
+    "heartbeat": {
+      "agent.heartbeat": {
+        "direction": "box -> server",
+        "interval_seconds": 30,
+        "payload": {
+          "device_uuid": "string",
+          "agent_version": "string",
+          "rom_version": "string",
+          "uptime_seconds": "int",
+          "wg_ip": "string",
+          "network_state": "string (connected|disconnected)",
+          "ram_used_mb": "int",
+          "ram_total_mb": "int",
+          "cpu_percent": "float",
+          "temperature_c": "float (nullable)",
+          "storage_used_mb": "int",
+          "storage_total_mb": "int"
+        }
+      },
+      "server.heartbeat_ack": {
+        "direction": "server -> box",
+        "payload": {
+          "server_time": "int64",
+          "commands": "array (pending commands, nullable)"
+        }
+      }
+    },
+
+    "provisioning": {
+      "agent.provision_request": {
+        "direction": "box -> server",
+        "payload": {
+          "mac_wifi": "string",
+          "mac_ethernet": "string",
+          "serial": "string",
+          "android_id": "string",
+          "model": "string",
+          "soc": "string",
+          "ram_mb": "int",
+          "rom_version": "string",
+          "wg_public_key": "string",
+          "hardware_fingerprint": "string"
+        }
+      },
+      "server.provision_response": {
+        "direction": "server -> box",
+        "payload": {
+          "status": "string (ok|rejected|error)",
+          "device_uuid": "string",
+          "wg_config": {
+            "address": "string (10.88.0.x/32)",
+            "server_public_key": "string",
+            "server_endpoint": "string (host:port)",
+            "allowed_ips": "string (10.88.0.0/24)",
+            "persistent_keepalive": "int (25)"
+          },
+          "agent_config": {
+            "heartbeat_interval": "int (30)",
+            "server_api_url": "string",
+            "server_ws_url": "string"
+          }
+        }
+      }
+    },
+
+    "remote_session": {
+      "client.remote_start": {
+        "direction": "manager -> box (via server auth)",
+        "payload": {
+          "session_id": "string",
+          "profile": "string (auto|540p20|720p20|720p25|720p30)",
+          "audio": "bool (default false)"
+        }
+      },
+      "box.remote_ready": {
+        "direction": "box -> manager",
+        "payload": {
+          "session_id": "string",
+          "stream_port": "int",
+          "codec": "string (h264)",
+          "width": "int",
+          "height": "int",
+          "fps": "int",
+          "bitrate_kbps": "int",
+          "hw_encoder": "bool"
+        }
+      },
+      "client.remote_stop": {
+        "direction": "manager -> box",
+        "payload": {
+          "session_id": "string"
+        }
+      },
+      "box.remote_stopped": {
+        "direction": "box -> manager",
+        "payload": {
+          "session_id": "string",
+          "reason": "string"
+        }
+      }
+    },
+
+    "input": {
+      "client.input_mouse": {
+        "direction": "manager -> box",
+        "payload": {
+          "session_id": "string",
+          "action": "string (move|click|double_click|right_click|scroll|drag_start|drag_move|drag_end)",
+          "x": "float (0.0-1.0 normalized)",
+          "y": "float (0.0-1.0 normalized)",
+          "scroll_delta": "int (nullable)",
+          "button": "string (left|right|middle, nullable)"
+        }
+      },
+      "client.input_keyboard": {
+        "direction": "manager -> box",
+        "payload": {
+          "session_id": "string",
+          "action": "string (key_down|key_up|key_press)",
+          "keycode": "int (Android KeyEvent keycode)",
+          "meta_state": "int (modifier flags)"
+        }
+      },
+      "client.input_android": {
+        "direction": "manager -> box",
+        "payload": {
+          "session_id": "string",
+          "key": "string (back|home|recent|menu|volume_up|volume_down|enter|dpad_up|dpad_down|dpad_left|dpad_right|dpad_center)"
+        }
+      }
+    },
+
+    "file_transfer": {
+      "client.file_list": {
+        "direction": "manager -> box",
+        "payload": {
+          "session_id": "string",
+          "path": "string"
+        }
+      },
+      "box.file_list_result": {
+        "direction": "box -> manager",
+        "payload": {
+          "session_id": "string",
+          "path": "string",
+          "entries": [{
+            "name": "string",
+            "type": "string (file|directory)",
+            "size": "int64",
+            "modified": "int64 (unix ms)",
+            "permissions": "string"
+          }]
+        }
+      },
+      "client.file_upload_start": {
+        "direction": "manager -> box",
+        "payload": {
+          "transfer_id": "string",
+          "filename": "string",
+          "destination": "string",
+          "file_size": "int64",
+          "chunk_size": "int (default 4MB)",
+          "hash_sha256": "string",
+          "resume_offset": "int64 (default 0)"
+        }
+      },
+      "client.file_chunk": {
+        "direction": "manager -> box",
+        "payload": {
+          "transfer_id": "string",
+          "offset": "int64",
+          "data": "bytes (base64 in JSON, raw in binary frames)",
+          "chunk_index": "int"
+        }
+      },
+      "box.file_chunk_ack": {
+        "direction": "box -> manager",
+        "payload": {
+          "transfer_id": "string",
+          "offset": "int64",
+          "status": "string (ok|error)",
+          "speed_bps": "int64"
+        }
+      },
+      "client.file_download_start": {
+        "direction": "manager -> box",
+        "payload": {
+          "transfer_id": "string",
+          "path": "string",
+          "resume_offset": "int64 (default 0)"
+        }
+      },
+      "transfer.complete": {
+        "direction": "both",
+        "payload": {
+          "transfer_id": "string",
+          "hash_sha256": "string",
+          "total_bytes": "int64",
+          "status": "string (ok|hash_mismatch|error)"
+        }
+      },
+      "transfer.pause": { "direction": "both", "payload": { "transfer_id": "string" } },
+      "transfer.resume": { "direction": "both", "payload": { "transfer_id": "string" } },
+      "transfer.cancel": { "direction": "both", "payload": { "transfer_id": "string" } },
+
+      "client.file_mkdir": { "direction": "manager -> box", "payload": { "session_id": "string", "path": "string" } },
+      "client.file_rename": { "direction": "manager -> box", "payload": { "session_id": "string", "old_path": "string", "new_path": "string" } },
+      "client.file_delete": { "direction": "manager -> box", "payload": { "session_id": "string", "path": "string" } },
+      "client.file_move": { "direction": "manager -> box", "payload": { "session_id": "string", "source": "string", "destination": "string" } }
+    },
+
+    "adb_management": {
+      "client.adb_command": {
+        "direction": "manager -> box (via server)",
+        "payload": {
+          "command_id": "string",
+          "device_uuid": "string",
+          "command": "string",
+          "timeout_seconds": "int (default 30)"
+        }
+      },
+      "box.adb_result": {
+        "direction": "box -> manager (via server)",
+        "payload": {
+          "command_id": "string",
+          "exit_code": "int",
+          "stdout": "string",
+          "stderr": "string",
+          "duration_ms": "int"
+        }
+      },
+      "client.apk_install": {
+        "direction": "manager -> box (via server)",
+        "payload": {
+          "command_id": "string",
+          "device_uuid": "string",
+          "transfer_id": "string (file transfer for APK)"
+        }
+      },
+      "client.device_reboot": {
+        "direction": "manager -> box (via server)",
+        "payload": {
+          "command_id": "string",
+          "device_uuid": "string"
+        }
+      }
+    },
+
+    "adaptive": {
+      "box.resource_report": {
+        "direction": "box -> manager",
+        "payload": {
+          "session_id": "string",
+          "cpu_percent": "float",
+          "ram_used_mb": "int",
+          "temperature_c": "float",
+          "network_rx_bps": "int64",
+          "network_tx_bps": "int64",
+          "encoder_fps": "float",
+          "encoder_bitrate_kbps": "int",
+          "dropped_frames": "int",
+          "action": "string (none|reduce_fps|reduce_bitrate|reduce_resolution|stop, nullable)"
+        }
+      },
+      "client.profile_change": {
+        "direction": "manager -> box",
+        "payload": {
+          "session_id": "string",
+          "profile": "string",
+          "max_fps": "int (nullable)",
+          "max_bitrate_kbps": "int (nullable)"
+        }
+      }
+    }
+  },
+
+  "stream_transport": {
+    "video": {
+      "protocol": "TCP raw H.264 NAL units over WireGuard",
+      "port_range": "15100-15199",
+      "format": "H.264 Baseline/Main profile, Annex B byte stream",
+      "notes": "Low-latency: no B-frames, short GOP, CBR/VBR adaptive"
+    },
+    "control": {
+      "protocol": "WebSocket JSON over WireGuard",
+      "port": 15000,
+      "notes": "All control messages, input, file ops"
+    }
+  },
+
+  "error_codes": {
+    "E001": "Authentication failed",
+    "E002": "License expired or invalid",
+    "E003": "Device not found",
+    "E004": "Device offline",
+    "E005": "Permission denied",
+    "E006": "Session limit reached",
+    "E007": "Encoder initialization failed",
+    "E008": "Resource limit exceeded",
+    "E009": "Transfer interrupted",
+    "E010": "Command timeout",
+    "E011": "Provisioning rejected",
+    "E012": "WireGuard connection failed"
+  }
+}

@@ -1,0 +1,43 @@
+name: tx3_manager
+description: TX3 Remote Management - Windows Desktop Manager
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.7.0
+  flutter: ">=3.29.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  # State management
+  provider: ^6.1.2
+  # HTTP & WebSocket
+  http: ^1.2.2
+  web_socket_channel: ^3.0.1
+  # Storage
+  shared_preferences: ^2.3.3
+  # UI
+  fluent_ui: ^4.9.2
+  system_theme: ^3.1.0
+  window_manager: ^0.4.3
+  # File handling
+  file_picker: ^8.1.6
+  path: ^1.9.1
+  # Crypto
+  crypto: ^3.0.6
+  # JSON
+  json_annotation: ^4.9.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+  json_serializable: ^6.8.0
+  build_runner: ^2.4.13
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/

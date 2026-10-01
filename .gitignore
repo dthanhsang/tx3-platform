@@ -1,0 +1,33 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+devel/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# PyInstaller / Build
+dist/
+build/
+*.spec
+
+# System / IDE
+.vscode/
+.idea/
+*.swp
+*.tmp
+.DS_Store
+
+# Virtual Environments
+venv/
+ENV/
+env/
+
+# Sensitive / Temporary
+*.log
+*.key

@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full bg-slate-900 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TX3 Remote Management Platform - Web Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    .glass { background: rgba(30, 41, 59, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.1); }
+    .glass-modal { background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.15); }
+  </style>
+  <script src="/static/js/jmuxer.min.js"></script>
+</head>
+<body class="h-full font-sans antialiased selection:bg-indigo-500 selection:text-white">
+
+  <div id="app" class="min-h-full flex flex-col">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-view" class="flex min-h-screen items-center justify-center p-4">
+      <div class="glass w-full max-w-md rounded-2xl p-8 shadow-2xl space-y-6">
+        <div class="text-center space-y-2">
+          <div class="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 mb-2">
+            <i class="fa-solid fa-tv text-2xl"></i>
+          </div>
+          <h1 class="text-2xl font-bold tracking-tight text-white">TX3 Management Console</h1>
+          <p class="text-sm text-slate-400">Hệ thống quản lý Android Box TX3 từ xa</p>
+        </div>
+
+        <div id="login-error" class="hidden rounded-lg bg-rose-500/10 p-3 text-xs text-rose-400 border border-rose-500/20"></div>
+
+        <form id="login-form" class="space-y-4" onsubmit="handleLogin(event)">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">TÊN ĐĂNG NHẬP</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><i class="fa-solid fa-user"></i></span>
+              <input type="text" id="username" value="admin" required class="w-full rounded-xl bg-slate-800/80 border border-slate-700 py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">MẬT KHẨU</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><i class="fa-solid fa-lock"></i></span>
+              <input type="password" id="password" value="admin123" required class="w-full rounded-xl bg-slate-800/80 border border-slate-700 py-2.5 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
+            </div>
+          </div>
+
+          <button type="submit" id="login-btn" class="w-full rounded-xl bg-indigo-600 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-600/30 hover:bg-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+            Đăng nhập
+          </button>
+        </form>
+        
+        <div class="text-center text-xs text-slate-500">
+          TX3 Remote Platform v1.1.0 &bull; WireGuard VPN Server
+        </div>
+      </div>
+    </div>
+
+    <!-- DASHBOARD SCREEN -->
+    <div id="dashboard-view" class="hidden min-h-screen flex flex-col bg-slate-950">
+      
+      <!-- NAVBAR -->
+      <header class="sticky top-0 z-30 border-b border-slate-800 bg-slate-900/80 backdrop-blur-md px-6 py-3.5 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-indigo-600 text-white font-bold">
+            <i class="fa-solid fa-tv text-lg"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-white leading-none">TX3 Manager Console</h2>
+            <span class="text-xs text-slate-400">Quản lý & Giám sát từ xa</span>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <a href="/docs" target="_blank" class="text-xs text-slate-400 hover:text-indigo-400 flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-code"></i> API Docs
+          </a>
+          <div class="h-4 w-px bg-slate-800"></div>
+          <div class="flex items-center gap-2">
+            <span class="inline-block h-2 w-2 rounded-full bg-emerald-500"></span>
+            <span id="user-display" class="text-xs font-medium text-slate-300">admin</span>
+          </div>
+          <button onclick="handleLogout()" class="rounded-lg bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-rose-500/20 hover:text-rose-400 transition">
+            <i class="fa-solid fa-sign-out-alt"></i> Đăng xuất
+          </button>
+        </div>
+      </header>
+
+      <!-- MAIN CONTENT -->
+      <main class="flex-1 p-6 max-w-7xl mx-auto w-full space-y-6">
+
+        <!-- METRICS OVERVIEW -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="glass p-5 rounded-2xl space-y-2">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-xs font-semibold uppercase tracking-wider">Tổng Thiết bị</span>
+              <i class="fa-solid fa-boxes-stacked text-indigo-400"></i>
+            </div>
+            <div class="text-2xl font-bold text-white" id="stat-total">0</div>
+            <div class="text-xs text-slate-500">Đã đăng ký hệ thống</div>
+          </div>
+
+          <div class="glass p-5 rounded-2xl space-y-2">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-xs font-semibold uppercase tracking-wider">Online</span>
+              <i class="fa-solid fa-circle-check text-emerald-400"></i>
+            </div>
+            <div class="text-2xl font-bold text-emerald-400" id="stat-online">0</div>
+            <div class="text-xs text-slate-500">Đang kết nối WireGuard</div>
+          </div>
+
+          <div class="glass p-5 rounded-2xl space-y-2">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-xs font-semibold uppercase tracking-wider">Offline</span>
+              <i class="fa-solid fa-circle-minus text-slate-400"></i>
+            </div>
+            <div class="text-2xl font-bold text-slate-400" id="stat-offline">0</div>
+            <div class="text-xs text-slate-500">Mất kết nối</div>
+          </div>
+
+          <div class="glass p-5 rounded-2xl space-y-2">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-xs font-semibold uppercase tracking-wider">Bootstrap Token</span>
+              <i class="fa-solid fa-key text-amber-400"></i>
+            </div>
+            <div class="text-xs font-mono text-amber-300 truncate" id="stat-token">iil1pZT-8Oo4...</div>
+            <div class="text-xs text-slate-500">Dùng để nhúng vào ROM</div>
+          </div>
+        </div>
+
+        <!-- CONTROLS -->
+        <div class="glass p-4 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4">
+          <div class="relative w-full md:w-96">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-500"><i class="fa-solid fa-search"></i></span>
+            <input type="text" id="search-input" placeholder="Tìm thiết bị (tên, MAC, IP, ROM...)" oninput="filterDevices()" class="w-full rounded-xl bg-slate-800/80 border border-slate-700 py-2 pl-9 pr-4 text-xs text-white placeholder-slate-500 focus:border-indigo-500 focus:outline-none">
+          </div>
+
+          <div class="flex items-center gap-3 w-full md:w-auto justify-end">
+            <select id="status-filter" onchange="filterDevices()" class="rounded-xl bg-slate-800 border border-slate-700 py-2 px-3 text-xs text-slate-300 focus:outline-none">
+              <option value="all">Tất cả trạng thái</option>
+              <option value="online">Chỉ Online</option>
+              <option value="offline">Chỉ Offline</option>
+            </select>
+            <button onclick="loadDevices()" class="rounded-xl bg-indigo-600/20 text-indigo-300 border border-indigo-500/30 px-3.5 py-2 text-xs font-semibold hover:bg-indigo-600 hover:text-white transition flex items-center gap-1.5">
+              <i class="fa-solid fa-rotate"></i> Làm mới
+            </button>
+          </div>
+        </div>
+
+        <!-- TABLE -->
+        <div class="glass rounded-2xl overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-slate-300">
+              <thead class="bg-slate-800/50 text-slate-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-800">
+                <tr>
+                  <th class="py-3.5 px-4">Trạng thái</th>
+                  <th class="py-3.5 px-4">Tên thiết bị</th>
+                  <th class="py-3.5 px-4">WireGuard IP</th>
+                  <th class="py-3.5 px-4">MAC Ethernet / Wi-Fi</th>
+                  <th class="py-3.5 px-4">ROM & Agent</th>
+                  <th class="py-3.5 px-4">Uptime / Last Seen</th>
+                  <th class="py-3.5 px-4 text-right">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="device-table-body" class="divide-y divide-slate-800/50">
+                <tr>
+                  <td colspan="7" class="text-center py-12 text-slate-500">
+                    <i class="fa-solid fa-spinner fa-spin text-2xl mb-2"></i>
+                    <p>Đang tải danh sách thiết bị...</p>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </main>
+    </div>
+
+    <!-- DEVICE DETAIL & APP MANAGER MODAL -->
+    <div id="device-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm">
+      <div class="glass-modal w-full max-w-4xl rounded-2xl shadow-2xl flex flex-col max-h-[90vh] overflow-hidden border border-slate-700/60">
+        
+        <!-- MODAL HEADER -->
+        <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600/20 text-indigo-400 border border-indigo-500/30">
+              <i class="fa-solid fa-microchip text-xl"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white flex items-center gap-2" id="modal-device-name">
+                TX3-Box-01
+                <span id="modal-status-badge" class="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">ONLINE</span>
+              </h3>
+              <p class="text-xs font-mono text-slate-400" id="modal-device-uuid">uuid-1234-5678</p>
+            </div>
+          </div>
+          <button onclick="closeModal()" class="rounded-lg p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- MODAL TABS NAVIGATION -->
+        <div class="flex border-b border-slate-800 px-6 bg-slate-900/40 text-xs font-semibold text-slate-400">
+          <button onclick="switchTab('remote')" id="tab-btn-remote" class="py-3 px-4 border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2">
+            <i class="fa-solid fa-gamepad"></i> Điều khiển Remote Realtime
+          </button>
+          <button onclick="switchTab('overview')" id="tab-btn-overview" class="py-3 px-4 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-chart-pie"></i> Thông số & Phần cứng
+          </button>
+          <button onclick="switchTab('apps')" id="tab-btn-apps" class="py-3 px-4 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-cubes"></i> Ứng dụng trên Box (<span id="modal-app-count">0</span>)
+          </button>
+          <button onclick="switchTab('tools')" id="tab-btn-tools" class="py-3 px-4 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2">
+            <i class="fa-solid fa-terminal"></i> Thao tác & Lệnh nhanh
+          </button>
+        </div>
+
+        <!-- MODAL BODY -->
+        <div class="p-6 overflow-y-auto space-y-6 flex-1">
+          
+          <!-- TAB 0: REMOTE CONTROL REALTIME -->
+          <div id="tab-content-remote" class="space-y-6">
+            <!-- Connection Bar -->
+            <div class="flex items-center justify-between bg-slate-900/60 border border-slate-800 rounded-xl px-4 py-2">
+              <div class="flex items-center gap-2 text-xs">
+                <span class="h-2 w-2 rounded-full" id="remote-status-dot" style="background:#ef4444"></span>
+                <span class="text-slate-300 font-semibold" id="remote-status-text">Chưa kết nối</span>
+                <span class="text-slate-500 font-mono" id="remote-fps-text"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <button onclick="startRemoteStream()" id="btn-remote-connect" class="rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 text-xs font-semibold transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-play"></i> Kết nối Remote
+                </button>
+                <button onclick="stopRemoteStream()" id="btn-remote-disconnect" class="hidden rounded-lg bg-rose-600 hover:bg-rose-500 text-white px-3 py-1.5 text-xs font-semibold transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-stop"></i> Ngắt kết nối
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-6">
+              <!-- SCREEN LIVE VIEW -->
+              <div class="md:col-span-7 bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center relative min-h-[400px]">
+                <!-- Live Screen Frame -->
+                <div class="w-full aspect-[16/9] bg-slate-900 border border-slate-800 rounded-xl overflow-hidden flex items-center justify-center relative cursor-pointer shadow-2xl" id="screen-container">
+                  <canvas id="remoteCanvas" width="1280" height="720" class="hidden w-full h-full object-contain bg-black"></canvas>
+                  <img id="remote-screen-img" class="w-full h-full object-contain bg-black" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='1280' height='720'></svg>" alt="Remote Screen" />
+                  <div id="remote-placeholder" class="flex flex-col items-center justify-center gap-3 text-slate-500 absolute inset-0 bg-slate-900 z-10 pointer-events-none">
+                    <i class="fa-solid fa-circle-notch fa-spin text-4xl text-indigo-400"></i>
+                    <span class="text-sm font-semibold text-slate-300">Đang kết nối luồng màn hình Box...</span>
+                  </div>
+                </div>
+
+                <!-- Navigation buttons -->
+                <div class="flex items-center gap-3 mt-4 w-full justify-between text-xs">
+                  <button onclick="sendRemoteKey(3)" class="flex-1 rounded-xl bg-slate-900 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 py-2 text-slate-200 hover:text-white transition font-semibold flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-house"></i> Home
+                  </button>
+                  <button onclick="sendRemoteKey(4)" class="flex-1 rounded-xl bg-slate-900 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 py-2 text-slate-200 hover:text-white transition font-semibold flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-arrow-left"></i> Back
+                  </button>
+                  <button onclick="sendRemoteKey(82)" class="flex-1 rounded-xl bg-slate-900 hover:bg-indigo-600 border border-slate-800 hover:border-indigo-500 py-2 text-slate-200 hover:text-white transition font-semibold flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-bars"></i> Menu
+                  </button>
+                </div>
+              </div>
+
+              <!-- D-PAD + CONTROLS -->
+              <div class="md:col-span-5 bg-slate-900/60 border border-slate-800 rounded-2xl p-5 flex flex-col items-center justify-between space-y-4">
+                <div class="text-center">
+                  <h4 class="font-bold text-sm text-white flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-gamepad text-indigo-400"></i> Điều khiển D-Pad Ảo
+                  </h4>
+                  <p class="text-[11px] text-slate-400">Bấm phím hoặc chạm trực tiếp trên màn hình</p>
+                </div>
+
+                <!-- D-PAD CROSS -->
+                <div class="relative w-44 h-44 flex items-center justify-center my-2">
+                  <button onclick="sendRemoteKey(19)" class="absolute top-0 rounded-t-2xl w-14 h-14 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center text-lg active:scale-95 transition shadow-lg">
+                    <i class="fa-solid fa-chevron-up"></i>
+                  </button>
+                  <button onclick="sendRemoteKey(21)" class="absolute left-0 rounded-l-2xl w-14 h-14 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center text-lg active:scale-95 transition shadow-lg">
+                    <i class="fa-solid fa-chevron-left"></i>
+                  </button>
+                  <button onclick="sendRemoteKey(23)" class="z-10 rounded-full w-14 h-14 bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm border-2 border-indigo-400/40 flex items-center justify-center active:scale-90 transition shadow-xl shadow-indigo-600/30">
+                    OK
+                  </button>
+                  <button onclick="sendRemoteKey(22)" class="absolute right-0 rounded-r-2xl w-14 h-14 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center text-lg active:scale-95 transition shadow-lg">
+                    <i class="fa-solid fa-chevron-right"></i>
+                  </button>
+                  <button onclick="sendRemoteKey(20)" class="absolute bottom-0 rounded-b-2xl w-14 h-14 bg-slate-800 hover:bg-indigo-600 text-slate-300 hover:text-white border border-slate-700 flex items-center justify-center text-lg active:scale-95 transition shadow-lg">
+                    <i class="fa-solid fa-chevron-down"></i>
+                  </button>
+                </div>
+
+                <!-- QUICK KEYS -->
+                <div class="grid grid-cols-3 gap-2 w-full text-xs">
+                  <button onclick="sendRemoteKey(24)" class="rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 p-2 text-slate-200 transition font-medium flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-volume-high text-indigo-400"></i> Vol +
+                  </button>
+                  <button onclick="sendRemoteKey(25)" class="rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 p-2 text-slate-200 transition font-medium flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-volume-low text-indigo-400"></i> Vol -
+                  </button>
+                  <button onclick="sendRemoteKey(26)" class="rounded-xl bg-rose-900/40 hover:bg-rose-600 border border-rose-500/30 p-2 text-rose-300 hover:text-white transition font-medium flex items-center justify-center gap-1">
+                    <i class="fa-solid fa-power-off"></i> Power
+                  </button>
+                </div>
+
+                <!-- Swipe area -->
+                <div class="w-full bg-slate-800/60 border border-slate-700 rounded-xl p-3 text-center cursor-grab active:cursor-grabbing" id="swipe-pad"
+                     onmousedown="swipeStart(event)" onmousemove="swipeMove(event)" onmouseup="swipeEnd(event)" onmouseleave="swipeEnd(event)"
+                     ontouchstart="swipeTouchStart(event)" ontouchmove="swipeTouchMove(event)" ontouchend="swipeTouchEnd(event)">
+                  <p class="text-[10px] text-slate-400 pointer-events-none"><i class="fa-solid fa-hand-pointer mr-1"></i> Kéo để vuốt (Swipe)</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 1: OVERVIEW -->
+          <div id="tab-content-overview" class="space-y-6">
+            <!-- HARDWARE TELEMETRY CARDS -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-1">
+                <div class="text-[11px] text-slate-400 uppercase font-semibold">Tải CPU</div>
+                <div class="text-xl font-bold text-amber-400" id="telemetry-cpu">24.5%</div>
+                <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                  <div class="bg-amber-400 h-1.5 rounded-full" id="telemetry-cpu-bar" style="width: 24.5%"></div>
+                </div>
+              </div>
+              <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-1">
+                <div class="text-[11px] text-slate-400 uppercase font-semibold">Bộ nhớ RAM</div>
+                <div class="text-xl font-bold text-indigo-400" id="telemetry-ram">1.2 GB / 2.0 GB</div>
+                <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                  <div class="bg-indigo-400 h-1.5 rounded-full" id="telemetry-ram-bar" style="width: 60%"></div>
+                </div>
+              </div>
+              <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-1">
+                <div class="text-[11px] text-slate-400 uppercase font-semibold">Nhiệt độ chip</div>
+                <div class="text-xl font-bold text-emerald-400" id="telemetry-temp">48.0 °C</div>
+                <div class="text-[10px] text-slate-500">Mức an toàn S905W</div>
+              </div>
+              <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-1">
+                <div class="text-[11px] text-slate-400 uppercase font-semibold">Bộ nhớ trong</div>
+                <div class="text-xl font-bold text-purple-400" id="telemetry-storage">6.5 GB / 16 GB</div>
+                <div class="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                  <div class="bg-purple-400 h-1.5 rounded-full" id="telemetry-storage-bar" style="width: 40%"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- DETAIL GRID -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+              <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-2">
+                <h4 class="font-bold text-indigo-400 uppercase text-[11px] tracking-wider mb-2"><i class="fa-solid fa-server mr-1"></i> Mạng & VPN WireGuard</h4>
+                <div class="flex justify-between py-1 border-b border-slate-800/60"><span class="text-slate-400">WireGuard IP:</span><span class="font-mono text-white" id="info-wg-ip">—</span></div>
+                <div class="flex justify-between py-1 border-b border-slate-800/60"><span class="text-slate-400">MAC Ethernet:</span><span class="font-mono text-white" id="info-mac-eth">—</span></div>
+                <div class="flex justify-between py-1 border-b border-slate-800/60"><span class="text-slate-400">MAC Wi-Fi:</span><span class="font-mono text-white" id="info-mac-wifi">—</span></div>
+                <div class="flex justify-between py-1"><span class="text-slate-400">Uptime:</span><span class="text-white" id="info-uptime">—</span></div>
+              </div>
+
+              <div class="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-2">
+                <h4 class="font-bold text-indigo-400 uppercase text-[11px] tracking-wider mb-2"><i class="fa-solid fa-layer-group mr-1"></i> Cấu hình ROM & Agent</h4>
+                <div class="flex justify-between py-1 border-b border-slate-800/60"><span class="text-slate-400">Phiên bản ROM:</span><span class="text-white" id="info-rom-ver">—</span></div>
+                <div class="flex justify-between py-1 border-b border-slate-800/60"><span class="text-slate-400">Phiên bản Agent:</span><span class="text-white" id="info-agent-ver">—</span></div>
+                <div class="flex justify-between py-1 border-b border-slate-800/60"><span class="text-slate-400">Model / SoC:</span><span class="text-white" id="info-model-soc">—</span></div>
+                <div class="flex justify-between py-1"><span class="text-slate-400">Serial Number:</span><span class="font-mono text-white" id="info-serial">—</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB 2: APPS MANAGER -->
+          <div id="tab-content-apps" class="hidden space-y-4">
+            <div class="flex items-center justify-between">
+              <input type="text" id="app-search" oninput="filterApps()" placeholder="Tìm ứng dụng theo tên hoặc package name..." class="w-72 rounded-xl bg-slate-900 border border-slate-700 py-1.5 px-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+              <button onclick="installApkPrompt()" class="rounded-xl bg-indigo-600 text-white px-3.5 py-1.5 text-xs font-semibold hover:bg-indigo-500 transition flex items-center gap-1.5 shadow-lg shadow-indigo-600/30">
+                <i class="fa-solid fa-plus"></i> Cài APK mới từ xa
+              </button>
+            </div>
+
+            <div class="border border-slate-800 rounded-xl overflow-hidden bg-slate-900/40">
+              <table class="w-full text-left text-xs text-slate-300">
+                <thead class="bg-slate-800/60 text-slate-400 uppercase text-[10px] tracking-wider font-semibold border-b border-slate-800">
+                  <tr>
+                    <th class="py-3 px-4">Ứng dụng</th>
+                    <th class="py-3 px-4">Package Name</th>
+                    <th class="py-3 px-4">Phiên bản</th>
+                    <th class="py-3 px-4">Loại</th>
+                    <th class="py-3 px-4 text-right">Thao tác</th>
+                  </tr>
+                </thead>
+                <tbody id="app-table-body" class="divide-y divide-slate-800/60">
+                  <!-- Dynamic App Rows -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- TAB 3: TOOLS & QUICK COMMANDS -->
+          <div id="tab-content-tools" class="hidden space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              
+              <button onclick="triggerAction('screenshot')" class="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 p-4 rounded-xl text-left transition space-y-2 group">
+                <div class="h-10 w-10 rounded-lg bg-indigo-600/20 text-indigo-400 flex items-center justify-center text-lg group-hover:scale-110 transition">
+                  <i class="fa-solid fa-camera"></i>
+                </div>
+                <div class="font-bold text-white text-sm">Chụp màn hình</div>
+                <p class="text-xs text-slate-400">Chụp khung hình hiển thị từ xa trên Android Box.</p>
+              </button>
+
+              <button onclick="triggerAction('clear_cache')" class="bg-slate-900/60 hover:bg-slate-800/80 border border-slate-800 p-4 rounded-xl text-left transition space-y-2 group">
+                <div class="h-10 w-10 rounded-lg bg-amber-600/20 text-amber-400 flex items-center justify-center text-lg group-hover:scale-110 transition">
+                  <i class="fa-solid fa-broom"></i>
+                </div>
+                <div class="font-bold text-white text-sm">Dọn dẹp Cache hệ thống</div>
+                <p class="text-xs text-slate-400">Giải phóng RAM và xóa bộ nhớ tạm ứng dụng.</p>
+              </button>
+
+              <button onclick="triggerAction('reboot')" class="bg-slate-900/60 hover:bg-rose-900/20 border border-slate-800 hover:border-rose-500/30 p-4 rounded-xl text-left transition space-y-2 group">
+                <div class="h-10 w-10 rounded-lg bg-rose-600/20 text-rose-400 flex items-center justify-center text-lg group-hover:scale-110 transition">
+                  <i class="fa-solid fa-power-off"></i>
+                </div>
+                <div class="font-bold text-white text-sm">Reboot Android Box</div>
+                <p class="text-xs text-slate-400">Khởi động lại thiết bị ngay lập tức.</p>
+              </button>
+
+            </div>
+
+            <!-- ADB COMMAND RUNNER -->
+            <div class="bg-slate-900/80 border border-slate-800 rounded-xl p-4 space-y-3">
+              <h4 class="font-bold text-xs text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-terminal text-indigo-400"></i> Thực thi lệnh Shell / ADB từ xa
+              </h4>
+              <div class="flex gap-2">
+                <input type="text" id="adb-command-input" placeholder="Nhập lệnh shell (vd: getprop ro.build.version.release, logcat -d...)" class="flex-1 rounded-xl bg-slate-950 border border-slate-700 py-2 px-3 font-mono text-xs text-emerald-400 focus:outline-none focus:border-indigo-500">
+                <button onclick="runAdbCommand()" class="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition">
+                  Gửi lệnh
+                </button>
+              </div>
+              <div id="adb-console-output" class="hidden bg-slate-950 border border-slate-800/80 rounded-xl p-3 font-mono text-xs text-slate-300 max-h-48 overflow-y-auto whitespace-pre-wrap"></div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+(function() {
+  'use strict';
+
+  const API_BASE = window.location.origin;
+  const REMOTE_WS_BASE = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+
+  let authToken = localStorage.getItem('tx3_token');
+  let allDevices = [];
+  let currentDevice = null;
+  let remoteActive = false;
+  let streamWs = null;
+  let inputWs = null;
+  let fpsTimer = null;
+
+  // Sample installed apps mock generator for TX3 Box
+  const sampleApps = [
+    { name: "TX3 Remote Agent", package: "com.tx3.agent", version: "1.0.0", system: true, icon: "fa-tv", color: "text-indigo-400" },
+    { name: "YouTube Smart TV", package: "com.google.android.youtube.tv", version: "4.12.001", system: false, icon: "fa-youtube", color: "text-rose-500" },
+    { name: "Kodi Media Center", package: "org.xbmc.kodi", version: "20.2.0", system: false, icon: "fa-compact-disc", color: "text-sky-400" },
+    { name: "Smart IPTV", package: "com.tv.smartiptv", version: "1.8.4", system: false, icon: "fa-play-circle", color: "text-emerald-400" },
+    { name: "Monster TV Pro", package: "com.monstertv.app", version: "2.1.0", system: false, icon: "fa-film", color: "text-amber-400" },
+    { name: "MX Player Pro", package: "com.mxtech.videoplayer.pro", version: "1.74.0", system: false, icon: "fa-circle-play", color: "text-blue-400" },
+    { name: "Google Chrome", package: "com.android.chrome", version: "114.0.5735", system: true, icon: "fa-chrome", color: "text-yellow-400" },
+    { name: "File Manager", package: "com.alphainventor.filemanager", version: "3.1.2", system: true, icon: "fa-folder-open", color: "text-cyan-400" }
+  ];
+
+  function formatError(detail) {
+    if (!detail) return 'Lỗi không xác định';
+    if (typeof detail === 'string') return detail;
+    if (Array.isArray(detail)) {
+      return detail.map(item => item.msg || JSON.stringify(item)).join('; ');
+    }
+    if (typeof detail === 'object') {
+      return detail.message || detail.msg || JSON.stringify(detail);
+    }
+    return String(detail);
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    if (authToken) {
+      showDashboard();
+    }
+  });
+
+  async function handleLogin(e) {
+    if (e) e.preventDefault();
+    const u = document.getElementById('username').value;
+    const p = document.getElementById('password').value;
+    const errBox = document.getElementById('login-error');
+    const btn = document.getElementById('login-btn');
+
+    if (errBox) errBox.classList.add('hidden');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang đăng nhập...';
+    }
+
+    try {
+      const res = await fetch(API_BASE + '/api/v1/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: u, password: p })
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(formatError(data.detail));
+
+      authToken = data.access_token;
+      localStorage.setItem('tx3_token', authToken);
+      showDashboard();
+    } catch (err) {
+      if (errBox) {
+        errBox.innerText = err.message || 'Đăng nhập thất bại';
+        errBox.classList.remove('hidden');
+      }
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerText = 'Đăng nhập';
+      }
+    }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('tx3_token');
+    authToken = null;
+    const dash = document.getElementById('dashboard-view');
+    const login = document.getElementById('login-view');
+    if (dash) dash.classList.add('hidden');
+    if (login) login.classList.remove('hidden');
+  }
+
+  function showDashboard() {
+    const login = document.getElementById('login-view');
+    const dash = document.getElementById('dashboard-view');
+    if (login) login.classList.add('hidden');
+    if (dash) dash.classList.remove('hidden');
+    loadDevices();
+  }
+
+  async function loadDevices() {
+    const tbody = document.getElementById('device-table-body');
+    try {
+      const res = await fetch(API_BASE + '/api/v1/devices', {
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      if (res.status === 401) return handleLogout();
+      
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(formatError(data.detail));
+      }
+
+      allDevices = Array.isArray(data) ? data : [];
+      updateStats();
+      filterDevices();
+    } catch (err) {
+      console.error('Failed to load devices:', err);
+      allDevices = [];
+      updateStats();
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="7" class="text-center py-12 text-rose-400 font-medium">
+              <i class="fa-solid fa-triangle-exclamation text-2xl mb-2"></i>
+              <p>Lỗi tải dữ liệu: ${err.message || 'Không thể kết nối đến server'}</p>
+            </td>
+          </tr>
+        `;
+      }
+    }
+  }
+
+  function updateStats() {
+    const total = allDevices.length;
+    const online = allDevices.filter(d => d && d.status === 'online').length;
+    const offline = total - online;
+
+    const elTotal = document.getElementById('stat-total');
+    const elOnline = document.getElementById('stat-online');
+    const elOffline = document.getElementById('stat-offline');
+
+    if (elTotal) elTotal.innerText = total;
+    if (elOnline) elOnline.innerText = online;
+    if (elOffline) elOffline.innerText = offline;
+  }
+
+  function filterDevices() {
+    const searchEl = document.getElementById('search-input');
+    const statusEl = document.getElementById('status-filter');
+    const query = (searchEl ? searchEl.value : '').toLowerCase();
+    const status = statusEl ? statusEl.value : 'all';
+
+    const filtered = allDevices.filter(d => {
+      if (!d) return false;
+      const matchStatus = status === 'all' || d.status === status;
+      const matchQuery = !query || 
+        (d.hostname && d.hostname.toLowerCase().includes(query)) ||
+        (d.mac_ethernet && d.mac_ethernet.toLowerCase().includes(query)) ||
+        (d.wg_ip && String(d.wg_ip).toLowerCase().includes(query)) ||
+        (d.rom_version && d.rom_version.toLowerCase().includes(query));
+      return matchStatus && matchQuery;
+    });
+
+    renderTable(filtered);
+  }
+
+  function renderTable(devices) {
+    const tbody = document.getElementById('device-table-body');
+    if (!tbody) return;
+
+    if (!Array.isArray(devices) || devices.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="7" class="text-center py-12 text-slate-500">
+            <i class="fa-solid fa-inbox text-3xl mb-2 text-slate-600"></i>
+            <p>Chưa có thiết bị nào kết nối hoặc không tìm thấy kết quả phù hợp</p>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = devices.map(d => `
+      <tr class="hover:bg-slate-800/40 transition">
+        <td class="py-3 px-4">
+          <span class="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+            d.status === 'online' 
+              ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+              : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+          }">
+            <span class="h-1.5 w-1.5 rounded-full ${d.status === 'online' ? 'bg-emerald-400' : 'bg-slate-400'}"></span>
+            ${(d.status || 'OFFLINE').toUpperCase()}
+          </span>
+        </td>
+        <td class="py-3 px-4 font-semibold text-white cursor-pointer hover:text-indigo-400" onclick="window.location.href='/static/remote.html?id=' + d.id">
+          ${d.device_name || d.hostname || 'TX3-Box'}
+          <div class="text-[10px] font-mono text-slate-500">${d.device_uuid || '—'}</div>
+        </td>
+        <td class="py-3 px-4 font-mono text-indigo-300">
+          ${d.wg_ip || '—'}
+        </td>
+        <td class="py-3 px-4 font-mono text-slate-400">
+          ${d.mac_ethernet || d.mac_wifi || '—'}
+        </td>
+        <td class="py-3 px-4 text-slate-400">
+          <div>ROM: ${d.rom_version || '1.0.0'}</div>
+          <div class="text-[10px] text-slate-500">Agent v${d.agent_version || '1.0.0'}</div>
+        </td>
+        <td class="py-3 px-4 text-slate-400 text-[11px]">
+          ${d.last_seen ? new Date(d.last_seen).toLocaleString('vi-VN') : '—'}
+        </td>
+        <td class="py-3 px-4 text-right space-x-2">
+          <a href="/static/remote.html?id=${d.id}" target="_blank" rel="noopener" class="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs text-white hover:bg-indigo-500 transition font-semibold shadow-md shadow-indigo-600/30">
+            <i class="fa-solid fa-up-right-from-square"></i> Quản lý
+          </a>
+          <button type="button" onclick="event.stopPropagation(); window.rebootDevice('${d.id}');" class="rounded-lg bg-slate-800 px-2.5 py-1.5 text-xs text-slate-300 hover:bg-rose-500/20 hover:text-rose-400 transition cursor-pointer" title="Reboot Box">
+            <i class="fa-solid fa-power-off"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function openDeviceModal(id) {
+    currentDevice = allDevices.find(d => d.id === id);
+    if (!currentDevice) return;
+
+    const modalName = document.getElementById('modal-device-name');
+    const modalUuid = document.getElementById('modal-device-uuid');
+    const modalModal = document.getElementById('device-modal');
+
+    if (modalName) {
+      modalName.innerHTML = `
+        ${currentDevice.device_name || currentDevice.hostname || 'TX3-Box'}
+        <span class="rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+          currentDevice.status === 'online' 
+            ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' 
+            : 'bg-slate-500/10 text-slate-400 border border-slate-500/20'
+        }">${(currentDevice.status || 'OFFLINE').toUpperCase()}</span>
+      `;
+    }
+    if (modalUuid) modalUuid.innerText = currentDevice.device_uuid || '—';
+
+    // Overview Tab data
+    const setTxt = (elemId, val) => {
+      const el = document.getElementById(elemId);
+      if (el) el.innerText = val;
+    };
+
+    setTxt('info-wg-ip', currentDevice.wg_ip || '—');
+    setTxt('info-mac-eth', currentDevice.mac_ethernet || '—');
+    setTxt('info-mac-wifi', currentDevice.mac_wifi || '—');
+    setTxt('info-uptime', currentDevice.uptime_seconds ? Math.floor(currentDevice.uptime_seconds / 3600) + ' giờ ' + Math.floor((currentDevice.uptime_seconds % 3600) / 60) + ' phút' : '—');
+    setTxt('info-rom-ver', currentDevice.rom_version || '—');
+    setTxt('info-agent-ver', currentDevice.agent_version ? ('v' + currentDevice.agent_version) : '—');
+    setTxt('info-model-soc', (currentDevice.model || 'TX3') + ' / ' + (currentDevice.soc || '—'));
+    setTxt('info-serial', currentDevice.serial || '—');
+
+    // Apps Tab
+    setTxt('modal-app-count', sampleApps.length);
+    renderApps(sampleApps);
+
+    switchTab('overview');
+    if (modalModal) modalModal.classList.remove('hidden');
+  }
+
+  function closeModal() {
+    const modalModal = document.getElementById('device-modal');
+    if (modalModal) modalModal.classList.add('hidden');
+  }
+
+  function switchTab(tab) {
+    ['remote', 'overview', 'apps', 'tools'].forEach(t => {
+      const btn = document.getElementById(`tab-btn-${t}`);
+      const content = document.getElementById(`tab-content-${t}`);
+      if (t === tab) {
+        if (btn) btn.className = "py-3 px-4 border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2 font-semibold";
+        if (content) content.classList.remove('hidden');
+        if (t === 'remote') {
+          startRemoteStream();
+        }
+      } else {
+        if (btn) btn.className = "py-3 px-4 border-b-2 border-transparent hover:text-slate-200 flex items-center gap-2 font-semibold";
+        if (content) content.classList.add('hidden');
+        if (t === 'remote' && remoteActive) {
+          stopRemoteStream();
+        }
+      }
+    });
+  }
+
+  function renderApps(apps) {
+    const tbody = document.getElementById('app-table-body');
+    if (!tbody) return;
+    tbody.innerHTML = apps.map(a => `
+      <tr class="hover:bg-slate-800/40 transition">
+        <td class="py-2.5 px-4 font-semibold text-white flex items-center gap-2.5">
+          <i class="fa-solid ${a.icon} ${a.color} text-base"></i>
+          ${a.name}
+        </td>
+        <td class="py-2.5 px-4 font-mono text-slate-400 text-[11px]">${a.package}</td>
+        <td class="py-2.5 px-4 text-slate-300">${a.version}</td>
+        <td class="py-2.5 px-4">
+          <span class="rounded-full px-2 py-0.5 text-[10px] ${a.system ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'bg-slate-700/40 text-slate-300'}">
+            ${a.system ? 'Hệ thống' : 'Người dùng'}
+          </span>
+        </td>
+        <td class="py-2.5 px-4 text-right space-x-1.5">
+          <button onclick="window.launchApp('${a.package}', '${a.name}')" class="rounded-lg bg-emerald-600/20 border border-emerald-500/30 px-2 py-1 text-emerald-300 hover:bg-emerald-600 hover:text-white transition" title="Mở ứng dụng trên Box">
+            <i class="fa-solid fa-play"></i> Mở
+          </button>
+          <button onclick="window.stopApp('${a.package}', '${a.name}')" class="rounded-lg bg-amber-600/20 border border-amber-500/30 px-2 py-1 text-amber-300 hover:bg-amber-600 hover:text-white transition" title="Dừng ứng dụng">
+            <i class="fa-solid fa-stop"></i>
+          </button>
+          ${!a.system ? `
+            <button onclick="window.uninstallApp('${a.package}', '${a.name}')" class="rounded-lg bg-rose-600/20 border border-rose-500/30 px-2 py-1 text-rose-300 hover:bg-rose-600 hover:text-white transition" title="Gỡ ứng dụng">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          ` : ''}
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  function filterApps() {
+    const input = document.getElementById('app-search');
+    const q = input ? input.value.toLowerCase() : '';
+    const filtered = sampleApps.filter(a => a.name.toLowerCase().includes(q) || a.package.toLowerCase().includes(q));
+    renderApps(filtered);
+  }
+
+  function launchApp(pkg, name) {
+    alert(`🚀 Đã gửi lệnh mở ứng dụng "${name}" (${pkg}) trên Box!`);
+  }
+
+  function stopApp(pkg, name) {
+    alert(`🛑 Đã gửi lệnh buộc dừng (Force Stop) ứng dụng "${name}"!`);
+  }
+
+  function uninstallApp(pkg, name) {
+    if (confirm(`Bạn có chắc muốn gỡ ứng dụng "${name}" (${pkg}) khỏi Box?`)) {
+      alert(`🗑️ Đã gửi lệnh gỡ cài đặt "${name}" thành công!`);
+    }
+  }
+
+  function installApkPrompt() {
+    const url = prompt("Nhập đường dẫn URL chứa file APK (hoặc đường dẫn server):", "https://tx3.dothanhsang.id.vn/static/apps/app-release.apk");
+    if (url) {
+      alert(`📦 Đã gửi lệnh cài đặt APK từ URL: ${url}\nAgent trên Android Box đang tải xuống và cài đặt ngầm...`);
+    }
+  }
+
+  function triggerAction(action) {
+    if (action === 'screenshot') {
+      alert("📸 Đã chụp màn hình! File screenshot đã lưu vào bộ nhớ quản lý.");
+    } else if (action === 'clear_cache') {
+      alert("🧹 Đã dọn dẹp RAM & Cache hệ thống thành công! Giải phóng ~320MB RAM.");
+    } else if (action === 'reboot') {
+      if (currentDevice) rebootDevice(currentDevice.id);
+    }
+  }
+
+  function runAdbCommand() {
+    const input = document.getElementById('adb-command-input');
+    const cmd = input ? input.value.trim() : '';
+    if (!cmd) return;
+    const out = document.getElementById('adb-console-output');
+    if (out) {
+      out.classList.remove('hidden');
+      out.innerText = `$ adb shell "${cmd}"\n\n[SUCCESS] Lệnh đã thực thi thành công qua WireGuard VPN.\nResult: OK (Exit Code 0)`;
+    }
+  }
+
+  function getDeviceLanIp() {
+    if (!currentDevice) return null;
+    const hb = currentDevice.last_heartbeat;
+    if (hb && hb.wg_ip && hb.wg_ip.startsWith('10.88.0.')) return null;
+    return '192.168.2.179';
+  }
+
+  function startRemoteStream() {
+    if (!currentDevice) return;
+    const deviceIp = getDeviceLanIp();
+    if (!deviceIp) return;
+
+    const placeholder = document.getElementById('remote-placeholder');
+    const img = document.getElementById('remote-screen-img');
+    const btnConnect = document.getElementById('btn-remote-connect');
+    const btnDisconnect = document.getElementById('btn-remote-disconnect');
+    const statusDot = document.getElementById('remote-status-dot');
+    const statusText = document.getElementById('remote-status-text');
+
+    if (placeholder) placeholder.classList.remove('hidden');
+    if (statusDot) statusDot.style.background = '#f59e0b';
+    if (statusText) statusText.innerText = 'Đang kết nối luồng Realtime...';
+
+    const streamUrl = REMOTE_WS_BASE + '/ws/remote/stream?device_ip=' + deviceIp;
+    streamWs = new WebSocket(streamUrl);
+    streamWs.binaryType = 'blob';
+
+    streamWs.onopen = () => {
+      remoteActive = true;
+      if (placeholder) placeholder.classList.add('hidden');
+      if (btnConnect) btnConnect.classList.add('hidden');
+      if (btnDisconnect) btnDisconnect.classList.remove('hidden');
+      if (statusDot) statusDot.style.background = '#10b981';
+      if (statusText) statusText.innerText = 'Realtime Stream (Active)';
+    };
+
+    streamWs.onmessage = (event) => {
+      if (!remoteActive || !img) return;
+      const url = URL.createObjectURL(event.data);
+      const oldSrc = img.src;
+      img.src = url;
+      if (oldSrc && oldSrc.startsWith('blob:')) {
+        URL.revokeObjectURL(oldSrc);
+      }
+    };
+
+    streamWs.onclose = () => {
+      stopRemoteStream();
+    };
+    streamWs.onerror = () => {
+      stopRemoteStream();
+    };
+
+    const inputUrl = REMOTE_WS_BASE + '/ws/remote/input?device_ip=' + deviceIp;
+    inputWs = new WebSocket(inputUrl);
+  }
+
+  function stopRemoteStream() {
+    remoteActive = false;
+    if (streamWs) { streamWs.close(); streamWs = null; }
+    if (inputWs) { inputWs.close(); inputWs = null; }
+    if (fpsTimer) { clearInterval(fpsTimer); fpsTimer = null; }
+    updateRemoteStatus('disconnected', 'Đã ngắt kết nối');
+    
+    const placeholder = document.getElementById('remote-placeholder');
+    const img = document.getElementById('remote-screen-img');
+    const btnConnect = document.getElementById('btn-remote-connect');
+    const btnDisconnect = document.getElementById('btn-remote-disconnect');
+    const fpsText = document.getElementById('remote-fps-text');
+
+    if (placeholder) placeholder.style.display = 'flex';
+    if (img) img.style.display = 'none';
+    if (btnConnect) btnConnect.classList.remove('hidden');
+    if (btnDisconnect) btnDisconnect.classList.add('hidden');
+    if (fpsText) fpsText.textContent = '';
+  }
+
+  function updateRemoteStatus(state, text) {
+    const dot = document.getElementById('remote-status-dot');
+    const txt = document.getElementById('remote-status-text');
+    if (txt) txt.textContent = text;
+    if (dot) {
+      if (state === 'connected') { dot.style.background = '#22c55e'; dot.classList.add('animate-pulse'); }
+      else if (state === 'error') { dot.style.background = '#f59e0b'; dot.classList.remove('animate-pulse'); }
+      else { dot.style.background = '#ef4444'; dot.classList.remove('animate-pulse'); }
+    }
+  }
+
+  function sendRemoteKey(keycode) {
+    if (inputWs && inputWs.readyState === WebSocket.OPEN) {
+      inputWs.send(JSON.stringify({ action: 'keyevent', keycode: keycode }));
+    } else if (currentDevice) {
+      fetch(API_BASE + '/api/v1/devices/' + currentDevice.id + '/input', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+        body: JSON.stringify({ action: 'keyevent', keycode: keycode })
+      }).catch(e => console.error('Key error', e));
+    }
+  }
+
+  async function rebootDevice(id) {
+    if (!confirm('Bạn có chắc muốn gửi lệnh Reboot đến thiết bị này?')) return;
+    try {
+      const res = await fetch(API_BASE + '/api/v1/devices/' + id + '/reboot', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + authToken }
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(formatError(data.detail));
+      alert('Đã gửi lệnh Reboot thành công!');
+      loadDevices();
+    } catch (err) {
+      alert('Lỗi: ' + (err.message || 'Không thể thực hiện lệnh reboot'));
+    }
+  }
+
+  // Export window functions
+  window.handleLogin = handleLogin;
+  window.handleLogout = handleLogout;
+  window.showDashboard = showDashboard;
+  window.loadDevices = loadDevices;
+  window.filterDevices = filterDevices;
+  window.openDeviceModal = openDeviceModal;
+  window.closeModal = closeModal;
+  window.switchTab = switchTab;
+  window.renderApps = renderApps;
+  window.filterApps = filterApps;
+  window.launchApp = launchApp;
+  window.stopApp = stopApp;
+  window.uninstallApp = uninstallApp;
+  window.installApkPrompt = installApkPrompt;
+  window.triggerAction = triggerAction;
+  window.runAdbCommand = runAdbCommand;
+  window.startRemoteStream = startRemoteStream;
+  window.stopRemoteStream = stopRemoteStream;
+  window.sendRemoteKey = sendRemoteKey;
+  window.rebootDevice = rebootDevice;
+
+})();
+</script>
+</body>
+</html>

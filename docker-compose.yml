@@ -1,0 +1,71 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: tx3-postgres
+    environment:
+      POSTGRES_DB: tx3_management
+      POSTGRES_USER: tx3
+      POSTGRES_PASSWORD: tx3_secure_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./management-server/database/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tx3 -d tx3_management"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Management Server
+  server:
+    build:
+      context: ./management-server
+      dockerfile: Dockerfile
+    container_name: tx3-server
+    ports:
+      - "8400:8400"
+    environment:
+      TX3_DATABASE_URL: postgresql+asyncpg://tx3:tx3_secure_password@postgres:5432/tx3_management
+      TX3_SECRET_KEY: ${TX3_SECRET_KEY:-change-me-in-production}
+      TX3_WG_SERVER_IP: 10.88.0.1
+      TX3_WG_SERVER_PORT: 51820
+      TX3_WG_SERVER_PUBLIC_KEY: ${WG_SERVER_PUBLIC_KEY:-}
+      TX3_WG_SERVER_ENDPOINT: ${WG_SERVER_ENDPOINT:-your-server.example.com:51820}
+      TX3_DEBUG: "false"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - file_storage:/var/lib/tx3/storage
+
+  # WireGuard Server
+  wireguard:
+    image: linuxserver/wireguard:latest
+    container_name: tx3-wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Asia/Ho_Chi_Minh
+      SERVERURL: ${WG_SERVER_ENDPOINT:-your-server.example.com}
+      SERVERPORT: 51820
+      INTERNAL_SUBNET: 10.88.0.0/24
+      ALLOWEDIPS: 10.88.0.0/24
+    ports:
+      - "51820:51820/udp"
+    volumes:
+      - wireguard_config:/config
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+      - net.ipv4.ip_forward=1
+
+volumes:
+  postgres_data:
+  file_storage:
+  wireguard_config:

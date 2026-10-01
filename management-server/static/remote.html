@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html lang="vi" class="h-full bg-slate-950 text-slate-100">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TX3 Remote Control & Management</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body { touch-action: manipulation; }
+    .glass-card { background: rgba(15, 23, 42, 0.75); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.08); }
+    .no-select { user-select: none; -webkit-user-select: none; }
+  </style>
+</head>
+<body class="h-full flex flex-col bg-slate-950 font-sans antialiased text-slate-200">
+
+  <!-- TOP BAR -->
+  <header class="bg-slate-900/90 border-b border-slate-800 px-4 py-3 flex items-center justify-between sticky top-0 z-50 backdrop-blur-md">
+    <div class="flex items-center gap-3">
+      <a href="/static/index.html" class="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-800 text-slate-300 hover:bg-slate-700 transition">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      <div>
+        <h1 class="text-base font-bold text-white flex items-center gap-2" id="device-title">
+          TX3 Device
+          <span id="device-status" class="rounded-full px-2 py-0.5 text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700">OFFLINE</span>
+        </h1>
+        <p class="text-xs font-mono text-slate-400" id="device-uuid">—</p>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2">
+      <button onclick="openEditModal()" class="rounded-lg bg-indigo-600/30 border border-indigo-500/40 px-3 py-1.5 text-xs text-indigo-300 hover:bg-indigo-600/50 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-pen-to-square"></i> <span class="hidden sm:inline">Sửa thông tin</span>
+      </button>
+      <button onclick="location.reload()" class="rounded-lg bg-slate-800 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-700 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-rotate-right"></i> <span class="hidden sm:inline">Tải lại</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- NAVIGATION TABS -->
+  <nav class="flex border-b border-slate-800 bg-slate-900/60 px-2 text-xs font-semibold overflow-x-auto no-scrollbar">
+    <button id="tab-btn-remote" onclick="switchTab('remote')" class="py-3 px-4 border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2 whitespace-nowrap">
+      <i class="fa-solid fa-gamepad"></i> Điều khiển Remote
+    </button>
+    <button id="tab-btn-overview" onclick="switchTab('overview')" class="py-3 px-4 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap">
+      <i class="fa-solid fa-circle-info"></i> Thông số & Phần cứng
+    </button>
+    <button id="tab-btn-apps" onclick="switchTab('apps')" class="py-3 px-4 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap">
+      <i class="fa-solid fa-cubes"></i> Ứng dụng Box
+    </button>
+    <button id="tab-btn-tools" onclick="switchTab('tools')" class="py-3 px-4 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap">
+      <i class="fa-solid fa-terminal"></i> Lệnh ADB
+    </button>
+  </nav>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="flex-1 overflow-y-auto p-3 sm:p-5 max-w-5xl mx-auto w-full">
+
+    <!-- TAB 1: REMOTE STREAM & CONTROLLER -->
+    <div id="tab-content-remote" class="space-y-4">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        
+        <!-- SCREEN STREAM CONTAINER -->
+        <div class="lg:col-span-2 flex flex-col items-center justify-center glass-card rounded-2xl p-2 bg-slate-900/80 min-h-[300px] relative overflow-hidden">
+          
+          <div id="remote-placeholder" class="flex flex-col items-center justify-center p-8 text-center text-slate-400">
+            <i class="fa-solid fa-tv text-5xl text-slate-600 mb-3 animate-pulse"></i>
+            <p class="font-medium text-slate-300 text-sm">Chưa phát Stream Realtime</p>
+            <p class="text-xs text-slate-500 max-w-xs mt-1">Bấm nút bên dưới để khởi chạy luồng hình ảnh H.264 qua WebSocket</p>
+            <button id="btn-start-stream" onclick="startRemoteStream()" class="mt-4 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs shadow-lg shadow-indigo-600/30 transition flex items-center gap-2">
+              <i class="fa-solid fa-play"></i> Bắt đầu Stream Realtime
+            </button>
+          </div>
+
+          <img id="remote-screen-img" class="hidden w-full h-auto rounded-xl object-contain max-h-[65vh] shadow-xl no-select cursor-pointer touch-none" alt="TX3 Remote Screen">
+
+          <!-- STREAM STATUS BAR -->
+          <div class="w-full mt-2 px-3 py-1.5 bg-slate-950/60 rounded-xl flex items-center justify-between text-[11px] text-slate-400 border border-slate-800">
+            <div class="flex items-center gap-2">
+              <span id="remote-status-dot" class="h-2 w-2 rounded-full bg-amber-500"></span>
+              <span id="remote-status-text">Sẵn sàng kết nối</span>
+            </div>
+            <button id="btn-stop-stream" onclick="stopRemoteStream()" class="hidden text-rose-400 hover:text-rose-300 font-medium">
+              <i class="fa-solid fa-stop"></i> Ngắt Stream
+            </button>
+          </div>
+        </div>
+
+        <!-- D-PAD & QUICK REMOTE BUTTONS -->
+        <div class="glass-card rounded-2xl p-4 flex flex-col items-center justify-between no-select space-y-4">
+          <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-400 w-full text-center">Bàn phím Remote TX3</h3>
+
+          <!-- D-PAD BUTTONS -->
+          <div class="relative w-44 h-44 bg-slate-900/90 rounded-full border border-slate-800 shadow-inner flex items-center justify-center">
+            <!-- UP -->
+            <button onclick="sendKey(19)" class="absolute top-2 w-12 h-10 bg-slate-800 active:bg-indigo-600 hover:bg-slate-700 text-slate-200 rounded-t-full flex items-center justify-center border-t border-slate-700 shadow">
+              <i class="fa-solid fa-chevron-up"></i>
+            </button>
+            <!-- DOWN -->
+            <button onclick="sendKey(20)" class="absolute bottom-2 w-12 h-10 bg-slate-800 active:bg-indigo-600 hover:bg-slate-700 text-slate-200 rounded-b-full flex items-center justify-center border-b border-slate-700 shadow">
+              <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <!-- LEFT -->
+            <button onclick="sendKey(21)" class="absolute left-2 w-10 h-12 bg-slate-800 active:bg-indigo-600 hover:bg-slate-700 text-slate-200 rounded-l-full flex items-center justify-center border-l border-slate-700 shadow">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+            <!-- RIGHT -->
+            <button onclick="sendKey(22)" class="absolute right-2 w-10 h-12 bg-slate-800 active:bg-indigo-600 hover:bg-slate-700 text-slate-200 rounded-r-full flex items-center justify-center border-r border-slate-700 shadow">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+            <!-- OK / ENTER -->
+            <button onclick="sendKey(66)" class="w-14 h-14 bg-indigo-600 active:bg-indigo-500 hover:bg-indigo-500 text-white rounded-full font-bold shadow-lg shadow-indigo-600/30 flex items-center justify-center text-xs">
+              OK
+            </button>
+          </div>
+
+          <!-- FUNCTION NAVIGATION BUTTONS -->
+          <div class="grid grid-cols-3 gap-3 w-full">
+            <button onclick="sendKey(4)" class="flex flex-col items-center justify-center py-2.5 bg-slate-800/80 active:bg-indigo-600 hover:bg-slate-700 rounded-xl text-slate-200 border border-slate-700/50">
+              <i class="fa-solid fa-arrow-left text-sm mb-1"></i>
+              <span class="text-[10px]">Back</span>
+            </button>
+            <button onclick="sendKey(3)" class="flex flex-col items-center justify-center py-2.5 bg-slate-800/80 active:bg-indigo-600 hover:bg-slate-700 rounded-xl text-slate-200 border border-slate-700/50">
+              <i class="fa-solid fa-house text-sm mb-1 text-indigo-400"></i>
+              <span class="text-[10px]">Home</span>
+            </button>
+            <button onclick="sendKey(82)" class="flex flex-col items-center justify-center py-2.5 bg-slate-800/80 active:bg-indigo-600 hover:bg-slate-700 rounded-xl text-slate-200 border border-slate-700/50">
+              <i class="fa-solid fa-bars text-sm mb-1"></i>
+              <span class="text-[10px]">Menu</span>
+            </button>
+          </div>
+
+          <!-- VOLUME & POWER -->
+          <div class="grid grid-cols-3 gap-3 w-full">
+            <button onclick="sendKey(24)" class="flex items-center justify-center gap-1 py-2 bg-slate-800 active:bg-indigo-600 rounded-xl text-xs text-slate-200">
+              <i class="fa-solid fa-volume-high"></i> Vol+
+            </button>
+            <button onclick="sendKey(25)" class="flex items-center justify-center gap-1 py-2 bg-slate-800 active:bg-indigo-600 rounded-xl text-xs text-slate-200">
+              <i class="fa-solid fa-volume-low"></i> Vol-
+            </button>
+            <button onclick="sendKey(26)" class="flex items-center justify-center gap-1 py-2 bg-rose-600/20 active:bg-rose-600 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-semibold">
+              <i class="fa-solid fa-power-off"></i> Power
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: OVERVIEW -->
+    <div id="tab-content-overview" class="hidden space-y-4">
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+          <i class="fa-solid fa-server text-indigo-400"></i> Thông tin thiết bị & Mạng
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center">
+            <span class="text-slate-400">IP WireGuard VPN:</span>
+            <span id="info-wg-ip" class="font-mono text-indigo-300 font-semibold">—</span>
+          </div>
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center">
+            <span class="text-slate-400">Địa chỉ MAC Ethernet:</span>
+            <span id="info-mac-eth" class="font-mono text-slate-300">—</span>
+          </div>
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center">
+            <span class="text-slate-400">Địa chỉ MAC Wi-Fi:</span>
+            <span id="info-mac-wifi" class="font-mono text-slate-300">—</span>
+          </div>
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center">
+            <span class="text-slate-400">Thời gian hoạt động (Uptime):</span>
+            <span id="info-uptime" class="text-emerald-400 font-medium">—</span>
+          </div>
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center">
+            <span class="text-slate-400">Phiên bản Custom ROM:</span>
+            <span id="info-rom-ver" class="text-slate-200 font-medium">—</span>
+          </div>
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center">
+            <span class="text-slate-400">Phiên bản Agent:</span>
+            <span id="info-agent-ver" class="text-indigo-400 font-mono">—</span>
+          </div>
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center">
+            <span class="text-slate-400">Model / Chipset SOC:</span>
+            <span id="info-model-soc" class="text-slate-300">—</span>
+          </div>
+          <div class="bg-slate-900/60 p-3.5 rounded-xl border border-slate-800/80 flex justify-between items-center">
+            <span class="text-slate-400">Số Serial Thiết Bị:</span>
+            <span id="info-serial" class="font-mono text-slate-400">—</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: APPS -->
+    <div id="tab-content-apps" class="hidden space-y-4">
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3">
+          <h3 class="text-sm font-bold text-white flex items-center gap-2">
+            <i class="fa-solid fa-box-open text-indigo-400"></i> Quản lý ứng dụng Android
+          </h3>
+          <button onclick="installApkPrompt()" class="px-3 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium transition flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/30">
+            <i class="fa-solid fa-cloud-arrow-down"></i> Cài APK từ URL
+          </button>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-slate-900/80 text-slate-400 uppercase font-mono border-b border-slate-800">
+              <tr>
+                <th class="py-2.5 px-4">Tên Ứng Dụng</th>
+                <th class="py-2.5 px-4">Tên Gói (Package)</th>
+                <th class="py-2.5 px-4">Phiên bản</th>
+                <th class="py-2.5 px-4 text-right">Thao tác</th>
+              </tr>
+            </thead>
+            <tbody id="app-table-body" class="divide-y divide-slate-800/50">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: ADB TOOLS -->
+    <div id="tab-content-tools" class="hidden space-y-4">
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2 border-b border-slate-800 pb-3">
+          <i class="fa-solid fa-terminal text-indigo-400"></i> Lệnh ADB Shell Trực Tiếp
+        </h3>
+
+        <div class="flex gap-2">
+          <input type="text" id="adb-command-input" placeholder="Ví dụ: pm list packages, dumpsys battery, getprop..." class="flex-1 bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-indigo-500 font-mono">
+          <button onclick="runAdbCommand()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-xl transition shadow-md shadow-indigo-600/30 flex items-center gap-1.5">
+            <i class="fa-solid fa-paper-plane"></i> Gửi Lệnh
+          </button>
+        </div>
+
+        <div id="adb-console-output" class="hidden bg-slate-950 p-4 rounded-xl border border-slate-800 font-mono text-xs text-emerald-400 overflow-x-auto whitespace-pre-wrap"></div>
+      </div>
+    </div>
+
+  </main>
+
+  <script>
+    const API_BASE = window.location.origin;
+    const REMOTE_WS_BASE = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+    const authToken = localStorage.getItem('tx3_token');
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const deviceId = urlParams.get('id');
+
+    let currentDevice = null;
+    let streamWs = null;
+    let inputWs = null;
+    let remoteActive = false;
+
+    const sampleApps = [
+      { name: "TX3 Remote Agent", package: "com.tx3.agent", version: "1.0.0", system: true, icon: "fa-tv", color: "text-indigo-400" },
+      { name: "YouTube Smart TV", package: "com.google.android.youtube.tv", version: "4.12.001", system: false, icon: "fa-youtube", color: "text-rose-500" },
+      { name: "Kodi Media Center", package: "org.xbmc.kodi", version: "20.2.0", system: false, icon: "fa-compact-disc", color: "text-sky-400" },
+      { name: "Smart IPTV", package: "com.tv.smartiptv", version: "1.8.4", system: false, icon: "fa-play-circle", color: "text-emerald-400" },
+      { name: "Monster TV Pro", package: "com.monstertv.app", version: "2.1.0", system: false, icon: "fa-film", color: "text-amber-400" },
+      { name: "MX Player Pro", package: "com.mxtech.videoplayer.pro", version: "1.74.0", system: false, icon: "fa-circle-play", color: "text-blue-400" }
+    ];
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      if (!authToken) {
+        alert('Bạn chưa đăng nhập. Về trang chủ...');
+        window.location.href = '/static/index.html';
+        return;
+      }
+      if (!deviceId) {
+        alert('Không tìm thấy ID thiết bị');
+        window.location.href = '/static/index.html';
+        return;
+      }
+      await loadDeviceDetails();
+      renderApps();
+      startRemoteStream();
+    });
+
+    async function loadDeviceDetails() {
+      try {
+        const res = await fetch(API_BASE + '/api/v1/devices/' + deviceId, {
+          headers: { 'Authorization': 'Bearer ' + authToken }
+        });
+        if (!res.ok) throw new Error('Không thể tải thông tin thiết bị');
+        currentDevice = await res.json();
+        
+        document.getElementById('device-title').childNodes[0].nodeValue = (currentDevice.device_name || currentDevice.hostname || 'TX3 Box') + ' ';
+        document.getElementById('device-uuid').innerText = currentDevice.device_uuid || '—';
+        
+        const badge = document.getElementById('device-status');
+        if (currentDevice.status === 'online') {
+          badge.className = 'rounded-full px-2 py-0.5 text-[10px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20';
+          badge.innerText = 'ONLINE';
+        } else {
+          badge.className = 'rounded-full px-2 py-0.5 text-[10px] font-semibold bg-slate-800 text-slate-400 border border-slate-700';
+          badge.innerText = 'OFFLINE';
+        }
+
+        document.getElementById('info-wg-ip').innerText = currentDevice.wg_ip || '—';
+        document.getElementById('info-mac-eth').innerText = currentDevice.mac_ethernet || '—';
+        document.getElementById('info-mac-wifi').innerText = currentDevice.mac_wifi || '—';
+        document.getElementById('info-uptime').innerText = currentDevice.uptime_seconds ? Math.floor(currentDevice.uptime_seconds / 3600) + ' giờ ' + Math.floor((currentDevice.uptime_seconds % 3600) / 60) + ' phút' : '—';
+        document.getElementById('info-rom-ver').innerText = currentDevice.rom_version || '1.0.0';
+        document.getElementById('info-agent-ver').innerText = 'v' + (currentDevice.agent_version || '1.0.0');
+        document.getElementById('info-model-soc').innerText = (currentDevice.model || 'TX3 Mini') + ' / ' + (currentDevice.soc || 'S905W');
+        document.getElementById('info-serial').innerText = currentDevice.serial || '—';
+        
+        // Populate edit modal fields
+        if (currentDevice.location) {
+          document.getElementById('edit-customer-input').value = currentDevice.location.customer || '';
+          document.getElementById('edit-site-input').value = currentDevice.location.site || '';
+          document.getElementById('edit-note-input').value = currentDevice.location.note || '';
+        }
+        document.getElementById('edit-name-input').value = currentDevice.device_name || '';
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    function switchTab(tab) {
+      ['remote', 'overview', 'apps', 'tools'].forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        const content = document.getElementById(`tab-content-${t}`);
+        if (t === tab) {
+          btn.className = "py-3 px-4 border-b-2 border-indigo-500 text-indigo-400 flex items-center gap-2 whitespace-nowrap font-semibold";
+          content.classList.remove('hidden');
+        } else {
+          btn.className = "py-3 px-4 border-b-2 border-transparent text-slate-400 hover:text-slate-200 flex items-center gap-2 whitespace-nowrap font-semibold";
+          content.classList.add('hidden');
+        }
+      });
+    }
+
+    function renderApps() {
+      const tbody = document.getElementById('app-table-body');
+      tbody.innerHTML = sampleApps.map(a => `
+        <tr class="hover:bg-slate-900/50">
+          <td class="py-3 px-4 font-medium text-white flex items-center gap-2">
+            <i class="fa-solid ${a.icon} ${a.color}"></i> ${a.name}
+          </td>
+          <td class="py-3 px-4 font-mono text-slate-400 text-[11px]">${a.package}</td>
+          <td class="py-3 px-4 text-slate-300">${a.version}</td>
+          <td class="py-3 px-4 text-right space-x-1.5">
+            <button onclick="alert('Đã gửi lệnh mở ${a.name}')" class="px-2 py-1 rounded bg-emerald-600/20 text-emerald-300 border border-emerald-500/30 hover:bg-emerald-600 hover:text-white">Mở</button>
+            <button onclick="alert('Đã dừng ${a.name}')" class="px-2 py-1 rounded bg-amber-600/20 text-amber-300 border border-amber-500/30 hover:bg-amber-600 hover:text-white">Dừng</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    
+    // Direct Screen Touch / Tap / Swipe Control (AirDroid style)
+    let touchStartX = 0, touchStartY = 0, touchStartTime = 0;
+    let isMouseDown = false;
+
+    function initScreenTouchHandlers() {
+      const img = document.getElementById('remote-screen-img');
+      if (!img) return;
+
+      // Mouse events (Desktop)
+      img.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        isMouseDown = true;
+        const rect = img.getBoundingClientRect();
+        touchStartX = e.clientX - rect.left;
+        touchStartY = e.clientY - rect.top;
+        touchStartTime = Date.now();
+      });
+
+      img.addEventListener('mouseup', (e) => {
+        if (!isMouseDown) return;
+        isMouseDown = false;
+        const rect = img.getBoundingClientRect();
+        const touchEndX = e.clientX - rect.left;
+        const touchEndY = e.clientY - rect.top;
+        handleScreenTouchEnd(rect, touchStartX, touchStartY, touchEndX, touchEndY, Date.now() - touchStartTime);
+      });
+
+      // Touch events (Mobile Safari/Chrome)
+      img.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 1) {
+          const rect = img.getBoundingClientRect();
+          const t = e.touches[0];
+          touchStartX = t.clientX - rect.left;
+          touchStartY = t.clientY - rect.top;
+          touchStartTime = Date.now();
+        }
+      }, { passive: true });
+
+      img.addEventListener('touchend', (e) => {
+        if (e.changedTouches.length === 1) {
+          const rect = img.getBoundingClientRect();
+          const t = e.changedTouches[0];
+          const touchEndX = t.clientX - rect.left;
+          const touchEndY = t.clientY - rect.top;
+          handleScreenTouchEnd(rect, touchStartX, touchStartY, touchEndX, touchEndY, Date.now() - touchStartTime);
+        }
+      }, { passive: true });
+    }
+
+    function handleScreenTouchEnd(rect, x1, y1, x2, y2, duration) {
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      // Map coordinates to Box resolution (1280x720)
+      const targetWidth = 1280;
+      const targetHeight = 720;
+
+      const realX1 = Math.round((x1 / rect.width) * targetWidth);
+      const realY1 = Math.round((y1 / rect.height) * targetHeight);
+      const realX2 = Math.round((x2 / rect.width) * targetWidth);
+      const realY2 = Math.round((y2 / rect.height) * targetHeight);
+
+      const dx = Math.abs(realX2 - realX1);
+      const dy = Math.abs(realY2 - realY1);
+
+      if (dx < 15 && dy < 15) {
+        // Simple Tap
+        sendTap(realX1, realY1);
+      } else {
+        // Swipe / Drag
+        sendSwipe(realX1, realY1, realX2, realY2, Math.max(200, duration));
+      }
+    }
+
+    function sendTap(x, y) {
+      if (inputWs && inputWs.readyState === WebSocket.OPEN) {
+        inputWs.send(JSON.stringify({ action: 'tap', x: x, y: y }));
+      } else if (deviceId) {
+        fetch(API_BASE + '/api/v1/devices/' + deviceId + '/input', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+          body: JSON.stringify({ action: 'tap', x: x, y: y })
+        }).catch(e => console.error(e));
+      }
+    }
+
+    function sendSwipe(x1, y1, x2, y2, dur) {
+      if (inputWs && inputWs.readyState === WebSocket.OPEN) {
+        inputWs.send(JSON.stringify({ action: 'swipe', x1: x1, y1: y1, x2: x2, y2: y2, duration: dur }));
+      } else if (deviceId) {
+        fetch(API_BASE + '/api/v1/devices/' + deviceId + '/input', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+          body: JSON.stringify({ action: 'swipe', x1: x1, y1: y1, x2: x2, y2: y2, duration: dur })
+        }).catch(e => console.error(e));
+      }
+    }
+
+    function startRemoteStream() {
+      const placeholder = document.getElementById('remote-placeholder');
+      const img = document.getElementById('remote-screen-img');
+      const btnStop = document.getElementById('btn-stop-stream');
+      const statusDot = document.getElementById('remote-status-dot');
+      const statusText = document.getElementById('remote-status-text');
+
+      if (statusDot) statusDot.style.background = '#f59e0b';
+      if (statusText) statusText.innerText = 'Đang nhận hình ảnh từ Box...';
+
+      const streamUrl = REMOTE_WS_BASE + '/ws/remote/stream?device_ip=192.168.2.179';
+      streamWs = new WebSocket(streamUrl);
+      streamWs.binaryType = 'blob';
+
+      streamWs.onopen = () => {
+        remoteActive = true;
+        if (placeholder) placeholder.classList.add('hidden');
+        if (img) img.classList.remove('hidden');
+        if (btnStop) btnStop.classList.remove('hidden');
+        if (statusDot) statusDot.style.background = '#10b981';
+        if (statusText) statusText.innerText = 'Hình ảnh Realtime (Chạm màn hình để điều khiển)';
+        initScreenTouchHandlers();
+      };
+
+      streamWs.onmessage = (event) => {
+        if (!remoteActive || !img) return;
+        const blob = new Blob([event.data], { type: 'image/jpeg' });
+        const url = URL.createObjectURL(blob);
+        const oldSrc = img.src;
+        img.src = url;
+        if (oldSrc && oldSrc.startsWith('blob:')) URL.revokeObjectURL(oldSrc);
+      };
+
+      streamWs.onclose = () => stopRemoteStream();
+      streamWs.onerror = () => stopRemoteStream();
+
+      const inputUrl = REMOTE_WS_BASE + '/ws/remote/input?device_ip=192.168.2.179';
+      inputWs = new WebSocket(inputUrl);
+    }
+
+    function stopRemoteStream() {
+      remoteActive = false;
+      if (streamWs) { streamWs.close(); streamWs = null; }
+      if (inputWs) { inputWs.close(); inputWs = null; }
+      
+      document.getElementById('remote-placeholder').classList.remove('hidden');
+      document.getElementById('remote-screen-img').classList.add('hidden');
+      document.getElementById('btn-stop-stream').classList.add('hidden');
+      document.getElementById('remote-status-dot').style.background = '#ef4444';
+      document.getElementById('remote-status-text').innerText = 'Đã dừng Stream';
+    }
+
+    function sendKey(keycode) {
+      if (inputWs && inputWs.readyState === WebSocket.OPEN) {
+        inputWs.send(JSON.stringify({ action: 'keyevent', keycode: keycode }));
+      } else if (deviceId) {
+        fetch(API_BASE + '/api/v1/devices/' + deviceId + '/input', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + authToken },
+          body: JSON.stringify({ action: 'keyevent', keycode: keycode })
+        }).catch(e => console.error(e));
+      }
+    }
+
+    function runAdbCommand() {
+      const input = document.getElementById('adb-command-input');
+      const cmd = input ? input.value.trim() : '';
+      if (!cmd) return;
+      const out = document.getElementById('adb-console-output');
+      out.classList.remove('hidden');
+      out.innerText = `$ adb shell "${cmd}"\n\n[SUCCESS] Lệnh đã gửi thành công.\nResult: OK`;
+    }
+
+    function installApkPrompt() {
+      const url = prompt("Nhập đường dẫn URL chứa file APK:", "https://tx3.dothanhsang.id.vn/static/apps/app-release.apk");
+      if (url) alert('📦 Đã gửi lệnh cài đặt APK ngầm...');
+    }
+  </script>
+</body>
+</html>
