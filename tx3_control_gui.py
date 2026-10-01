@@ -2165,7 +2165,7 @@ PersistentKeepalive = 25
             QMessageBox.warning(self, "Lỗi Telegram", "Vui lòng nhập Bot Token và Chat ID!")
             return
         
-        msg = f"🧪 <b>TEST THÔNG BÁO TELEGRAM FROM TX3 MANAGER</b>\n\nHệ thống quản lý Android Box đang thử nghiệm tính năng cảnh báo tự động!\n⏱ Thời gian: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}"
+        msg = f"🧪 <b>TEST THÔNG BÁO TELEGRAM FROM TX3 MANAGER</b>\n\nHệ thống quản lý Android Box đang thử nghiệm tính năng cảnh báo tự động!\n⏱ Thời gian: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
         self.log(f"Đang gửi thông báo thử nghiệm tới Telegram Chat ID: {chatid}...", "INFO")
         self.tele_worker = TelegramWorker(token, chatid, msg)
@@ -2229,3 +2229,11 @@ PersistentKeepalive = 25
         self.batch_adb_worker = BatchAdbWorker(online_boxes, cmd_type="custom", custom_cmd=cmd, adb_cmd=self.adb_bin)
         self.batch_adb_worker.start()
 
+
+
+if __name__ == "__main__":
+    from PyQt5.QtWidgets import QApplication
+    app = QApplication(sys.argv)
+    window = TX3ControllerApp()
+    window.show()
+    sys.exit(app.exec_())
