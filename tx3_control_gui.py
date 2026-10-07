@@ -884,7 +884,7 @@ class TX3ControllerApp(QMainWindow):
                 padding: 2px 10px;
                 color: #1877f2;
                 background-color: #e7f3ff;
-                border: 1px solid #becd4;
+                border: 1px solid #beccd4;
                 border-radius: 6px;
                 font-weight: bold;
             }
@@ -1498,7 +1498,9 @@ class TX3ControllerApp(QMainWindow):
         # Auto check local tools on startup
         QTimer.singleShot(500, self.detect_local_tools)
 
-        # Initial Welcome Log    def log(self, message, level="INFO"):
+        self.log("Khởi động hệ thống điều khiển TX3 Remote Management Platform...", "INFO")
+
+    def log(self, message, level="INFO"):
         now_str = datetime.now().strftime("%H:%M:%S")
         color_map = {
             "INFO": "#9cdcfe",      # Light Blue
