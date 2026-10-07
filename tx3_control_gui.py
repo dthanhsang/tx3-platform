@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QColor, QTextCursor
 
-SERVER_URL = "http://10.88.0.1:8400"
+DEFAULT_SERVER_URL = "http://100.95.168.28:8400"
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 SCRCPY_WIN_URL = "https://github.com/Genymobile/scrcpy/releases/download/v2.4/scrcpy-win64-v2.4.zip"
@@ -74,15 +74,16 @@ class ApiWorker(QThread):
     finished = pyqtSignal(object)
     error = pyqtSignal(str)
 
-    def __init__(self, endpoint, token="", method="GET", data=None):
+    def __init__(self, endpoint, token="", method="GET", data=None, server_url=None):
         super().__init__()
         self.endpoint = endpoint
         self.token = token
         self.method = method
         self.data = data
+        self.server_url = server_url or DEFAULT_SERVER_URL
 
     def run(self):
-        url = f"{SERVER_URL}{self.endpoint}"
+        url = f"{self.server_url}{self.endpoint}"
         headers = {
             "Content-Type": "application/json",
             "User-Agent": USER_AGENT
@@ -640,7 +641,7 @@ class RomBuilderTab(QWidget):
         # Server Settings
         srv_layout = QHBoxLayout()
         srv_layout.addWidget(QLabel("Management Server URL:"))
-        self.txt_server_url = QLineEdit("http://10.88.0.1:8400")
+        self.txt_server_url = QLineEdit("http://100.95.168.28:8400")
         srv_layout.addWidget(self.txt_server_url)
 
         srv_layout.addWidget(QLabel("Bootstrap Secret Key:"))
@@ -816,6 +817,7 @@ class TX3ControllerApp(QMainWindow):
     def __init__(self):
         super().__init__()
         self.token = ""
+        self.current_server_url = DEFAULT_SERVER_URL
         self.devices = []
         self.selected_device = None
         self.scrcpy_bin = "scrcpy"
@@ -1749,7 +1751,8 @@ PersistentKeepalive = 25
         self.login_worker = ApiWorker(
             "/api/v1/auth/login",
             method="POST",
-            data={"username": username, "password": password}
+            data={"username": username, "password": password},
+            server_url=self.current_server_url
         )
         self.login_worker.finished.connect(self.on_login_success)
         self.login_worker.error.connect(self.on_login_error)
@@ -1784,7 +1787,7 @@ PersistentKeepalive = 25
         if not self.token:
             return
         self.statusBar.showMessage("Đang tải danh sách thiết bị...")
-        self.dev_worker = ApiWorker("/api/v1/devices", token=self.token)
+        self.dev_worker = ApiWorker("/api/v1/devices", token=self.token, server_url=self.current_server_url)
         self.dev_worker.finished.connect(self.on_load_devices_success)
         self.dev_worker.error.connect(self.on_load_devices_error)
         self.dev_worker.start()
