@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QColor, QTextCursor
 
-SERVER_URL = "https://tx3.dothanhsang.id.vn"
+SERVER_URL = "http://10.88.0.1:8400"
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 SCRCPY_WIN_URL = "https://github.com/Genymobile/scrcpy/releases/download/v2.4/scrcpy-win64-v2.4.zip"
@@ -640,7 +640,7 @@ class RomBuilderTab(QWidget):
         # Server Settings
         srv_layout = QHBoxLayout()
         srv_layout.addWidget(QLabel("Management Server URL:"))
-        self.txt_server_url = QLineEdit("https://tx3.dothanhsang.id.vn")
+        self.txt_server_url = QLineEdit("http://10.88.0.1:8400")
         srv_layout.addWidget(self.txt_server_url)
 
         srv_layout.addWidget(QLabel("Bootstrap Secret Key:"))
@@ -1693,7 +1693,7 @@ DNS = 1.1.1.1
 
 [Peer]
 PublicKey = uUACr1ZRHHNwZ3SrOCBx12uxOK4LWUpl8Ben0nJzREU=
-Endpoint = tx3.dothanhsang.id.vn:51820
+Endpoint = 1.52.108.100:51820
 AllowedIPs = 10.88.0.0/24
 PersistentKeepalive = 25
 """

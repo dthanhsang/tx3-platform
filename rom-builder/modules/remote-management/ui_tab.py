@@ -88,7 +88,7 @@ class RemoteManagementTab:
         server_row = ttk.Frame(self.server_frame)
         server_row.pack(fill="x", pady=(0, 8))
         ttk.Label(server_row, text="Server URL:").pack(side="left")
-        self.server_url = tk.StringVar(value="https://tx3.dothanhsang.id.vn")
+        self.server_url = tk.StringVar(value="http://10.88.0.1:8400")
         self.server_entry = ttk.Entry(server_row, textvariable=self.server_url, width=50)
         self.server_entry.pack(side="left", padx=(8, 0), fill="x", expand=True)
 

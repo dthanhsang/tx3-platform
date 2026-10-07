@@ -19,7 +19,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 
 # ── Configuration ──
-DEFAULT_SERVER_URL = "https://tx3.dothanhsang.id.vn"
+DEFAULT_SERVER_URL = "http://10.88.0.1:8400"
 APP_VERSION = "2.0.0"
 CHUNK_SIZE = 4 * 1024 * 1024  # 4 MB per chunk for file transfer
 

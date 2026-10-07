@@ -14,7 +14,7 @@ HEARTBEAT_INTERVAL=30
 MAX_LOG_SIZE=1048576  # 1MB
 
 # ── Default Config ──
-SERVER_URL="https://tx3.dothanhsang.id.vn"
+SERVER_URL="http://10.88.0.1:8400"
 BOOTSTRAP_TOKEN="iil1pZT-8Oo4lOBHmItC86PLcOeg-wnToucCc2IRNeU"
 DEVICE_UUID=""
 AUTH_TOKEN=""
