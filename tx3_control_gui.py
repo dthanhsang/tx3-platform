@@ -15,7 +15,7 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QLabel, QLineEdit, QPushButton, QTableWidget, QTableWidgetItem,
     QHeaderView, QMessageBox, QFileDialog, QGroupBox, QSplitter,
-    QStatusBar, QFrame, QStyleFactory, QProgressBar, QDialog, QTextEdit
+    QStatusBar, QFrame, QStyleFactory, QProgressBar, QDialog, QTextEdit, QScrollArea
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QTimer
 from PyQt5.QtGui import QFont, QColor, QTextCursor
@@ -1096,6 +1096,33 @@ class TX3ControllerApp(QMainWindow):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(6)
 
+        # 0. WireGuard VPN & Tools Status Box (Placed TOP LEFT before Login for instant VPN connection)
+        tools_box = QGroupBox("⚡ Quản lý WireGuard VPN Network & Công cụ")
+        tools_layout = QVBoxLayout(tools_box)
+        tools_layout.setContentsMargins(10, 10, 10, 10)
+        tools_layout.setSpacing(6)
+
+        self.lbl_tools_status = QLabel("Đang kiểm tra Scrcpy / ADB / WireGuard...")
+        self.lbl_tools_status.setStyleSheet("color: #050505; font-weight: 600; font-size: 12px;")
+        self.lbl_tools_status.setWordWrap(True)
+        tools_layout.addWidget(self.lbl_tools_status)
+
+        tools_btn_layout = QHBoxLayout()
+        self.btn_toggle_vpn = QPushButton("⚡ BẬT / TẮT WIREGUARD VPN NETWORK")
+        self.btn_toggle_vpn.setObjectName("btnVpn")
+        self.btn_toggle_vpn.setMinimumHeight(38)
+        self.btn_toggle_vpn.clicked.connect(self.toggle_wireguard_vpn)
+        tools_btn_layout.addWidget(self.btn_toggle_vpn)
+
+        self.btn_check_deps = QPushButton("⚙ Cài đặt Scrcpy/ADB")
+        self.btn_check_deps.setObjectName("btnSecondary")
+        self.btn_check_deps.setMinimumHeight(38)
+        self.btn_check_deps.clicked.connect(self.auto_check_and_install_deps)
+        tools_btn_layout.addWidget(self.btn_check_deps)
+
+        tools_layout.addLayout(tools_btn_layout)
+        left_layout.addWidget(tools_box)
+
         # 1. Login Group
         self.login_box = QGroupBox("1. Đăng nhập hệ thống")
         login_layout = QHBoxLayout(self.login_box)
@@ -1381,32 +1408,7 @@ class TX3ControllerApp(QMainWindow):
 
         controls_layout.addWidget(file_box)
 
-        # 5. WireGuard VPN & Tools Status Box (Prominently placed before Telegram)
-        tools_box = QGroupBox("5. Môi trường & Quản lý WireGuard VPN Status")
-        tools_layout = QVBoxLayout(tools_box)
-        tools_layout.setContentsMargins(10, 10, 10, 10)
-        tools_layout.setSpacing(6)
 
-        self.lbl_tools_status = QLabel("Đang kiểm tra Scrcpy / ADB / WireGuard...")
-        self.lbl_tools_status.setStyleSheet("color: #050505; font-weight: 600; font-size: 12px;")
-        self.lbl_tools_status.setWordWrap(True)
-        tools_layout.addWidget(self.lbl_tools_status)
-
-        tools_btn_layout = QHBoxLayout()
-        self.btn_toggle_vpn = QPushButton("⚡ BẬT / TẮT WIREGUARD VPN NETWORK")
-        self.btn_toggle_vpn.setObjectName("btnVpn")
-        self.btn_toggle_vpn.setMinimumHeight(38)
-        self.btn_toggle_vpn.clicked.connect(self.toggle_wireguard_vpn)
-        tools_btn_layout.addWidget(self.btn_toggle_vpn)
-
-        self.btn_check_deps = QPushButton("⚙ Cài đặt Scrcpy/ADB")
-        self.btn_check_deps.setObjectName("btnSecondary")
-        self.btn_check_deps.setMinimumHeight(38)
-        self.btn_check_deps.clicked.connect(self.auto_check_and_install_deps)
-        tools_btn_layout.addWidget(self.btn_check_deps)
-
-        tools_layout.addLayout(tools_btn_layout)
-        controls_layout.addWidget(tools_box)
 
         # 6. Telegram Notification Settings Box
         tele_box = QGroupBox("6. Cấu hình Cảnh báo Telegram Bot")
