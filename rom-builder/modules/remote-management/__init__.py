@@ -139,7 +139,7 @@ def generate_bootstrap_config(config: RemoteManagementConfig) -> str:
         f"BOOTSTRAP_TOKEN={config.bootstrap_token}",
         "",
         f"AGENT_AUTO_START={'1' if config.auto_start else '0'}",
-        f"WIREGUARD_AUTO_START={'1' if config.wireguard else '0'}",
+        f"TAILSCALE_AUTO_START={'1' if config.tailscale else '0'}",
         f"ADB_AUTO_ENABLE={'1' if config.auto_adb else '0'}",
         "ADB_TCP_PORT=5555",
         "",
@@ -326,7 +326,7 @@ def generate_debugfs_commands(
         "protocol_version": 1,
         "features": {
             "auto_start": config.auto_start,
-            "wireguard": config.wireguard,
+            "tailscale": config.tailscale,
             "live_remote": config.live_remote,
             "file_transfer": config.file_transfer,
             "remote_adb": config.remote_adb,

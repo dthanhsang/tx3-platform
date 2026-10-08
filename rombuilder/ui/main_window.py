@@ -92,11 +92,12 @@ class RomBuilderApp(tk.Tk):
         self.apk_tab = ttk.Frame(self.tabs, padding=12)
         self.launcher_tab = ttk.Frame(self.tabs, padding=12)
         self.root_tab = ttk.Frame(self.tabs, padding=12)
+        self.remote_tab = ttk.Frame(self.tabs, padding=12)
         self.build_tab = ttk.Frame(self.tabs, padding=12)
         self.log_tab = ttk.Frame(self.tabs, padding=8)
         self.about_tab = ttk.Frame(self.tabs, padding=18)
         for tab, title in ((self.overview_tab, "Tổng quan"), (self.rom_apps_tab, "Ứng dụng trong ROM"), (self.apk_tab, "Thêm APK"),
-                           (self.launcher_tab, "Launcher"), (self.root_tab, "Root"),
+                           (self.launcher_tab, "Launcher"), (self.root_tab, "Root"), (self.remote_tab, "Remote Management"),
                            (self.build_tab, "Đóng gói"), (self.log_tab, "Nhật ký")):
             self.tabs.add(tab, text=title)
         self.tabs.add(self.about_tab, text="Thông tin")
@@ -105,6 +106,7 @@ class RomBuilderApp(tk.Tk):
         self._build_apk_tab()
         self._build_launcher_tab()
         self._build_root_tab()
+        self._build_remote_tab()
         self._build_build_tab()
         self._build_log_tab()
         self._build_about_tab()
@@ -234,6 +236,16 @@ class RomBuilderApp(tk.Tk):
         ttk.Entry(row, textvariable=self.root_zip).pack(side="left", fill="x", expand=True)
         ttk.Button(row, text="Chọn ZIP SuperSU…", command=self.choose_root_zip).pack(side="left", padx=8)
         ttk.Label(self.root_tab, text="Ứng dụng sẽ kiểm tra kiến trúc, phiên bản Android, daemon và ứng dụng quản lý trước khi cho build.", foreground="#4b5563").pack(anchor="w")
+
+    def _build_remote_tab(self) -> None:
+        try:
+            rm_path = Path(__file__).resolve().parents[2] / "rom-builder" / "modules" / "remote-management"
+            if str(rm_path) not in sys.path:
+                sys.path.insert(0, str(rm_path))
+            import ui_tab
+            self.remote_mgmt_tab_ui = ui_tab.RemoteManagementTab(self.remote_tab, self)
+        except Exception as err:
+            ttk.Label(self.remote_tab, text=f"Không thể nạp module Remote Management: {err}", foreground="red").pack(anchor="w")
 
     def _build_build_tab(self) -> None:
         ttk.Label(self.build_tab, text="Xuất firmware mới", style="Section.TLabel").pack(anchor="w")
@@ -666,12 +678,24 @@ class RomBuilderApp(tk.Tk):
         self.apply_button.configure(state="disabled"); self.build_button.configure(state="disabled")
         additions = [{"path": info.path, "location": self.apk_locations.get(info.path, "/system/preinstall")} for info in self.apk_infos]
         removals = [self.rom_apps_by_path[path] for path in self.removal_paths if path in self.rom_apps_by_path]
-        threading.Thread(target=self._apply_worker, args=(additions, removals, self.launcher_package.get(), self.launcher_activity.get(), self.root_mode.get(), self.root_zip.get()), daemon=True).start()
+        remote_config = None
+        if hasattr(self, "remote_mgmt_tab_ui") and hasattr(self.remote_mgmt_tab_ui, "get_config"):
+            try:
+                raw_cfg = self.remote_mgmt_tab_ui.get_config()
+                rm_path = Path(__file__).resolve().parents[2] / "rom-builder" / "modules" / "remote-management"
+                if str(rm_path) not in sys.path:
+                    sys.path.insert(0, str(rm_path))
+                import __init__ as rm_module
+                remote_config = rm_module.RemoteManagementConfig.from_dict(raw_cfg)
+            except Exception as err:
+                self.log(f"CẢNH BÁO: Không thể lấy cấu hình Remote Management: {err}")
 
-    def _apply_worker(self, additions, removals, launcher_package, launcher_activity, root_mode, root_zip) -> None:
+        threading.Thread(target=self._apply_worker, args=(additions, removals, self.launcher_package.get(), self.launcher_activity.get(), self.root_mode.get(), self.root_zip.get(), remote_config), daemon=True).start()
+
+    def _apply_worker(self, additions, removals, launcher_package, launcher_activity, root_mode, root_zip, remote_config=None) -> None:
         try:
             output = self.project.apply(additions, removals, launcher_package, launcher_activity,
-                                        root_mode, root_zip,
+                                        root_mode, root_zip, remote_config,
                                         lambda p, t: self.events.put(("progress", p, t)))
             self.events.put(("applied", output))
         except Exception as exc:

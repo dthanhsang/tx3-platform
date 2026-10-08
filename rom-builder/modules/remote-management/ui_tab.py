@@ -223,7 +223,7 @@ class RemoteManagementTab:
         """Restore configuration from dict (project load)."""
         self.enabled.set(data.get("enabled", False))
         self.auto_start.set(data.get("auto_start", True))
-        self.wireguard.set(data.get("wireguard", True))
+        self.tailscale.set(data.get("tailscale", True))
         self.live_remote.set(data.get("live_remote", True))
         self.mouse_keyboard.set(data.get("mouse_keyboard_dpad", True))
         self.file_transfer.set(data.get("file_transfer", True))

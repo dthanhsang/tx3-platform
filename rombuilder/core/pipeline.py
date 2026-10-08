@@ -67,7 +67,7 @@ class AmlogicProject:
         return free_blocks * block_size
 
     def apply(self, additions, removals, launcher_package="", launcher_activity="",
-              root_mode="Giữ nguyên root hiện tại", root_zip="", progress=None):
+              root_mode="Giữ nguyên root hiện tại", root_zip="", remote_config=None, progress=None):
         added_size = sum(Path(item["path"]).stat().st_size for item in additions)
         removed_size = sum(int(item.get("size", 0)) for item in removals)
         if added_size > self.free_bytes(self.raw) + removed_size - 32 * 1024 * 1024:
@@ -173,6 +173,47 @@ class AmlogicProject:
                 "set_inode_field /bin/preinstall.sh mode 0100755",
                 "ea_set /bin/preinstall.sh security.selinux u:object_r:system_file:s0",
             ]
+
+        # Inject Remote Management & Tailscale if configured
+        if remote_config and getattr(remote_config, "enabled", False):
+            try:
+                import sys
+                from pathlib import Path
+                rm_path = Path(__file__).resolve().parents[2] / "rom-builder" / "modules" / "remote-management"
+                if str(rm_path) not in sys.path:
+                    sys.path.insert(0, str(rm_path))
+                import __init__ as rm_module
+                
+                # Append preinstall additions for remote management
+                script_path = self.work / "preinstall.rombuilder.sh"
+                if script_path.exists():
+                    current_script = script_path.read_text(encoding="utf-8")
+                else:
+                    original = self.work / "preinstall.current.sh"
+                    try:
+                        ext4.run_debugfs(self.modified, f"dump -p /bin/preinstall.sh \"{ext4.cygwin_path(original)}\"")
+                        current_script = original.read_text(encoding="utf-8", errors="replace") if original.exists() else "#!/system/bin/sh\n"
+                    except Exception:
+                        current_script = "#!/system/bin/sh\n"
+
+                modified_script = rm_module.modify_preinstall_script(current_script, remote_config)
+                script_path.write_text(modified_script, encoding="utf-8", newline="\n")
+
+                # Generate debugfs commands to inject binary and configs
+                rm_commands = rm_module.generate_debugfs_commands(remote_config, self.work)
+                commands += rm_commands
+
+                # Re-write preinstall.sh command
+                commands += [
+                    "cd /bin",
+                    "rm preinstall.sh",
+                    f"write \"{ext4.cygwin_path(script_path)}\" preinstall.sh",
+                    "cd /",
+                    "set_inode_field /bin/preinstall.sh mode 0100755",
+                    "ea_set /bin/preinstall.sh security.selinux u:object_r:system_file:s0",
+                ]
+            except Exception as rm_err:
+                print(f"Warning: Remote Management injection failed: {rm_err}")
         if progress: progress(70, "Đang áp dụng thay đổi vào EXT4")
         output = ext4.apply_commands(self.modified, commands)
         if "File not found" in output and additions:
