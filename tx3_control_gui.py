@@ -837,6 +837,8 @@ class RomBuilderTab(QWidget):
             QMessageBox.information(self, "THÀNH CÔNG", msg_box)
         else:
             QMessageBox.critical(self, "LỖI BUILD ROM", f"Không thể đóng gói ROM: {result_path}")
+APP_VERSION = "v1.2.5 (Tailscale 24/7)"
+
 class TX3ControllerApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -851,7 +853,7 @@ class TX3ControllerApp(QMainWindow):
         self.init_ui()
 
     def init_ui(self):
-        self.setWindowTitle("TX3 Remote Management Platform - Facebook Modern Theme")
+        self.setWindowTitle(f"TX3 Remote Management Platform {APP_VERSION} - Facebook Modern Theme")
         self.resize(1320, 860)
 
         # Facebook Design System Stylesheet
