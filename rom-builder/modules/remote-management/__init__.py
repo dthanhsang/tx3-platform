@@ -185,22 +185,17 @@ def generate_init_script(config: RemoteManagementConfig) -> str:
         ])
 
     
-    if config.rustdesk:
-        parts.extend([
-            "# RustDesk Service Auto-Start & Auto-Listen on Tailscale IP",
-            "if pm list packages | grep -q com.caracald.rustdesk; then",
-            "    am startservice -n com.caracald.rustdesk/.service.MainService 2>/dev/null",
-            "    am start -n com.caracald.rustdesk/.MainActivity 2>/dev/null",
-            "fi",
-            "",
-        ])
     if config.auto_adb:
         parts.extend([
-            "# Auto-enable ADB",
+            "# Auto-enable ADB & Memory/Thermal Optimization for 24/7 Stability",
             "setprop persist.sys.usb.config adb",
             "setprop service.adb.tcp.port 5555",
             "settings put global adb_enabled 1 2>/dev/null",
             "setprop persist.adb.tcp.enable 1",
+            "# Tối ưu hóa bộ nhớ RAM & LowMemoryKiller cho Android Box chạy 24/7",
+            "sysctl -w vm.dirty_background_ratio=5 2>/dev/null",
+            "sysctl -w vm.dirty_ratio=10 2>/dev/null",
+            "sysctl -w vm.vfs_cache_pressure=150 2>/dev/null",
             "stop adbd 2>/dev/null",
             "start adbd 2>/dev/null",
             "",

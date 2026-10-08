@@ -145,7 +145,6 @@ class RomBuilderApp(tk.Tk):
         actions = ttk.Frame(self.apk_tab)
         actions.pack(fill="x", pady=(0, 8))
         ttk.Button(actions, text="Thêm APK…", command=self.add_apks).pack(side="left")
-        ttk.Button(actions, text="⚡ Thêm RustDesk Remote App", command=self.add_rustdesk_apk).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Xóa khỏi danh sách", command=self.remove_selected_apk).pack(side="left", padx=8)
         ttk.Label(actions, text="Vị trí:").pack(side="left", padx=(18, 5))
         self.new_apk_location = tk.StringVar(value="/system/preinstall")
@@ -163,16 +162,6 @@ class RomBuilderApp(tk.Tk):
         self.apk_tree.pack(fill="both", expand=True)
 
     
-    def add_rustdesk_apk(self) -> None:
-        rustdesk_apk_path = "/tmp/rustdesk.apk"
-        if not Path(rustdesk_apk_path).exists():
-            messagebox.showerror("Lỗi", "Không tìm thấy file APK RustDesk tại /tmp/rustdesk.apk")
-            return
-        
-        self.status_text.set("Đang phân tích RustDesk APK...")
-        threading.Thread(target=self._apk_worker, args=([rustdesk_apk_path], "/system/priv-app"), daemon=True).start()
-        messagebox.showinfo("Thành công", "Đã thêm RustDesk Remote App vào danh sách cài đặt /system/priv-app!")
-
     def _build_rom_apps_tab(self) -> None:
         actions = ttk.Frame(self.rom_apps_tab)
         actions.pack(fill="x", pady=(0, 8))
@@ -659,8 +648,7 @@ class RomBuilderApp(tk.Tk):
         remote_info = "● Remote Management: TẮT"
         if hasattr(self, "remote_mgmt_tab_ui") and getattr(self.remote_mgmt_tab_ui, "enabled", None) and self.remote_mgmt_tab_ui.enabled.get():
             ts_status = "Đã bật Tailscale VPN" if self.remote_mgmt_tab_ui.tailscale.get() else "Tắt Tailscale"
-            rd_status = " + RustDesk Remote" if self.remote_mgmt_tab_ui.rustdesk.get() else ""
-            remote_info = f"✓ Remote Management: {ts_status}{rd_status}"
+            remote_info = f"✓ Remote Management: {ts_status}"
 
         self.build_checks.set(
             f"{'✓' if self.firmware_info.valid else '✗'} Cấu trúc gói firmware\n"
@@ -787,8 +775,6 @@ class RomBuilderApp(tk.Tk):
                         remote_summary = "\n\n🚀 ĐÃ TÍCH HỢP TỰ ĐỘNG (Zero-Touch):\n"
                         if self.remote_mgmt_tab_ui.tailscale.get():
                             remote_summary += " • Tailscale VPN (v1.78.1 ARM Binary + Autostart Service)\n"
-                        if self.remote_mgmt_tab_ui.rustdesk.get():
-                            remote_summary += " • RustDesk Remote App (/system/priv-app)\n"
                         if self.remote_mgmt_tab_ui.auto_adb.get():
                             remote_summary += " • Auto ADB TCP Port 5555\n"
 

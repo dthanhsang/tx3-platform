@@ -43,7 +43,7 @@ class RemoteManagementTab:
 
         self.auto_start = tk.BooleanVar(value=True)
         self.tailscale = tk.BooleanVar(value=True)
-        self.rustdesk = tk.BooleanVar(value=True)
+        self.rustdesk = tk.BooleanVar(value=False)
         self.tailscale_authkey = tk.StringVar(value="tskey-auth-kQEiimCRMm11CNTRL-K99q54JBSrEwPpjq7r7pqENLesKEXd4N")
         self.live_remote = tk.BooleanVar(value=True)
         self.mouse_keyboard = tk.BooleanVar(value=True)
@@ -58,7 +58,6 @@ class RemoteManagementTab:
         features = [
             (self.auto_start, "Auto Start", "Tự động khởi động agent khi boot"),
             (self.tailscale, "Tailscale VPN", "Tích hợp Tailscale VPN quản trị tự động"),
-            (self.rustdesk, "RustDesk Remote", "Tích hợp RustDesk tự khởi động để điều khiển & truyền file từ điện thoại"),
             (self.live_remote, "Live Remote", "Remote màn hình thời gian thực H.264"),
             (self.mouse_keyboard, "Mouse / Keyboard / D-Pad", "Điều khiển chuột, bàn phím, D-Pad từ xa"),
             (self.file_transfer, "File Transfer", "Truyền file hai chiều có resume"),
