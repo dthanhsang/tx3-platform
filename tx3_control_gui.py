@@ -541,11 +541,26 @@ class RomBuildWorker(QThread):
 
             self.progress_signal.emit(5, f"Bắt đầu quy trình đóng gói ROM thật cho: {filename}", "INFO")
 
-            # Make sure module paths are available
-            root_dir = Path(__file__).resolve().parent
-            if str(root_dir) not in sys.path:
-                sys.path.insert(0, str(root_dir))
-            rm_path = root_dir / "rom-builder" / "modules" / "remote-management"
+            # Make sure module paths are available (support source & PyInstaller frozen exe)
+            search_paths = []
+            if getattr(sys, "frozen", False):
+                meipass = getattr(sys, "_MEIPASS", None)
+                if meipass:
+                    search_paths.append(Path(meipass))
+                search_paths.append(Path(sys.executable).resolve().parent)
+            search_paths.append(Path(__file__).resolve().parent if '__file__' in locals() or '__file__' in globals() else Path.cwd())
+            search_paths.append(Path.cwd())
+
+            rm_path = None
+            for base in search_paths:
+                cand = base / "rom-builder" / "modules" / "remote-management"
+                if cand.exists() and (cand / "__init__.py").exists():
+                    rm_path = cand
+                    break
+
+            if not rm_path:
+                rm_path = Path.cwd() / "rom-builder" / "modules" / "remote-management"
+
             if str(rm_path) not in sys.path:
                 sys.path.insert(0, str(rm_path))
 

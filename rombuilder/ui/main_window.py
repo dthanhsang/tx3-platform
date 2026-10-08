@@ -678,7 +678,24 @@ class RomBuilderApp(tk.Tk):
         if hasattr(self, "remote_mgmt_tab_ui") and hasattr(self.remote_mgmt_tab_ui, "get_config"):
             try:
                 raw_cfg = self.remote_mgmt_tab_ui.get_config()
-                rm_path = Path(__file__).resolve().parents[2] / "rom-builder" / "modules" / "remote-management"
+                search_paths = []
+                if getattr(sys, "frozen", False):
+                    meipass = getattr(sys, "_MEIPASS", None)
+                    if meipass:
+                        search_paths.append(Path(meipass))
+                    search_paths.append(Path(sys.executable).resolve().parent)
+                search_paths.append(Path(__file__).resolve().parents[2])
+                search_paths.append(Path.cwd())
+
+                rm_path = None
+                for base in search_paths:
+                    cand = base / "rom-builder" / "modules" / "remote-management"
+                    if cand.exists() and (cand / "__init__.py").exists():
+                        rm_path = cand
+                        break
+                if not rm_path:
+                    rm_path = Path.cwd() / "rom-builder" / "modules" / "remote-management"
+
                 if str(rm_path) not in sys.path:
                     sys.path.insert(0, str(rm_path))
                 import importlib.util
