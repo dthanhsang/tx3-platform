@@ -100,6 +100,18 @@ AGENT_COMPONENTS = {
         "mode": "0100755",
         "description": "Boot init script",
     },
+    "tailscaled": {
+        "source": "binaries/tailscaled",
+        "destination": "/bin/tailscaled",
+        "mode": "0100755",
+        "description": "Tailscale Userspace Daemon Binary (ARM)",
+    },
+    "tailscale": {
+        "source": "binaries/tailscale",
+        "destination": "/bin/tailscale",
+        "mode": "0100755",
+        "description": "Tailscale CLI Binary (ARM)",
+    },
 }
 
 
