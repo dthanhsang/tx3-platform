@@ -1,19 +1,21 @@
 """TX3 Management Server - Provisioning Routes"""
 from __future__ import annotations
 
+import asyncio
 import ipaddress
+import json
 import uuid
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import select, func
+from sqlalchemy import or_, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from api.config import settings
 from api.schemas import HeartbeatRequest, HeartbeatResponse, ProvisionRequest, ProvisionResponse, WgConfig, AgentConfig
-from auth import audit_log, hash_token
+from auth import audit_log, hash_token, require_role
 from database import get_db
-from database.models import Device, ProvisioningToken, WgPeer
+from database.models import Device, ProvisioningToken, User, WgPeer
 
 router = APIRouter()
 
@@ -184,6 +186,10 @@ async def heartbeat(body: HeartbeatRequest, db: AsyncSession = Depends(get_db)):
         device.rom_version = body.rom_version
     if body.wg_ip and body.wg_ip.startswith("10.88.0."):
         device.wg_ip = body.wg_ip
+    if body.tailscale_ip and body.tailscale_ip.startswith("100."):
+        device.tailscale_ip = body.tailscale_ip
+    if body.tailscale_hostname:
+        device.tailscale_hostname = body.tailscale_hostname
 
     device.last_heartbeat = {
         "ram_used_mb": body.ram_used_mb,
@@ -204,3 +210,99 @@ async def heartbeat(body: HeartbeatRequest, db: AsyncSession = Depends(get_db)):
         server_time=int(now.timestamp() * 1000),
         commands=commands,
     )
+
+
+@router.post("/discover")
+async def discover_tailscale_devices(
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(require_role("admin")),
+):
+    """Scan Tailscale network for tx3-box-* devices and auto-register new ones."""
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "tailscale", "status", "--json",
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+        )
+        stdout, stderr = await asyncio.wait_for(proc.communicate(), timeout=10)
+        ts_data = json.loads(stdout.decode())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Cannot query Tailscale: {e}")
+
+    peers = ts_data.get("Peer", {})
+    discovered = []
+    created = []
+    updated = []
+
+    for _key, peer in peers.items():
+        hostname = peer.get("HostName", "")
+        if not hostname.lower().startswith("tx3-box"):
+            continue
+
+        ts_ips = peer.get("TailscaleIPs", [])
+        ts_ip = next((ip for ip in ts_ips if ip.startswith("100.")), None)
+        is_online = peer.get("Online", False)
+
+        discovered.append({
+            "hostname": hostname,
+            "tailscale_ip": ts_ip,
+            "online": is_online,
+        })
+
+        if not ts_ip:
+            continue
+
+        # Check if device already exists by tailscale_ip or hostname-based device_uuid
+        result = await db.execute(
+            select(Device).where(
+                or_(
+                    Device.tailscale_ip == ts_ip,
+                    Device.tailscale_hostname == hostname,
+                    Device.device_name == hostname,
+                )
+            )
+        )
+        existing = result.scalar_one_or_none()
+
+        if existing:
+            # Update existing device with Tailscale info
+            existing.tailscale_ip = ts_ip
+            existing.tailscale_hostname = hostname
+            if is_online:
+                existing.status = "online"
+                existing.last_seen = datetime.now(timezone.utc)
+            updated.append(hostname)
+        else:
+            # Auto-register new Box
+            device_uuid = f"TX3-{uuid.uuid4().hex[:8].upper()}"
+            # Try to find organization from existing provisioning tokens
+            org_result = await db.execute(
+                select(ProvisioningToken.organization_id)
+                .where(ProvisioningToken.status == "active")
+                .limit(1)
+            )
+            org_id = org_result.scalar_one_or_none()
+
+            new_device = Device(
+                device_uuid=device_uuid,
+                device_name=hostname,
+                organization_id=org_id,
+                tailscale_ip=ts_ip,
+                tailscale_hostname=hostname,
+                status="online" if is_online else "offline",
+                last_seen=datetime.now(timezone.utc) if is_online else None,
+            )
+            db.add(new_device)
+            created.append(hostname)
+
+    await audit_log(db, "tailscale_discover", "device", "info",
+                    user_id=user.id,
+                    metadata={"discovered": len(discovered), "created": len(created), "updated": len(updated)})
+    await db.commit()
+
+    return {
+        "status": "ok",
+        "discovered": discovered,
+        "created": created,
+        "updated": updated,
+    }

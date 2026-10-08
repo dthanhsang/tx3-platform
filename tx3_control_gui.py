@@ -1185,6 +1185,12 @@ class TX3ControllerApp(QMainWindow):
         self.btn_refresh.setObjectName("btnSecondary")
         self.btn_refresh.clicked.connect(self.load_devices)
         self.btn_refresh.setEnabled(False)
+
+        self.btn_discover = QPushButton("🔍 Quét Box Mới")
+        self.btn_discover.setObjectName("btnSecondary")
+        self.btn_discover.setToolTip("Quét dải mạng Tailscale để tự động nhận diện & đăng ký các Box mới flash ROM")
+        self.btn_discover.clicked.connect(self.discover_new_devices)
+        self.btn_discover.setEnabled(False)
         
         self.btn_select_all = QPushButton("☑️ Chọn tất cả")
         self.btn_select_all.setObjectName("btnSecondary")
@@ -1202,6 +1208,7 @@ class TX3ControllerApp(QMainWindow):
         self.txt_search_dev.textChanged.connect(self.filter_devices_table)
 
         top_dev_layout.addWidget(self.btn_refresh)
+        top_dev_layout.addWidget(self.btn_discover)
         top_dev_layout.addWidget(self.btn_select_all)
         top_dev_layout.addWidget(self.btn_export_csv)
         top_dev_layout.addWidget(self.txt_search_dev)
@@ -1839,7 +1846,9 @@ PersistentKeepalive = 25
         QMessageBox.information(self, "THÔNG BÁO DỊCH VỤ", f"🎉 Đăng nhập hệ thống thành công!\nXin chào {display_name}.")
 
         self.btn_refresh.setEnabled(True)
+        self.btn_discover.setEnabled(True)
         self.load_devices()
+        self.discover_new_devices()
         self.timer.start(15000)
 
     def on_login_error(self, err_msg):
@@ -1847,6 +1856,28 @@ PersistentKeepalive = 25
         self.log(f"❌ Đăng nhập thất bại: {err_msg}", "ERROR")
         QMessageBox.critical(self, "Thất bại", f"Lỗi đăng nhập: {err_msg}")
         self.statusBar.showMessage(f"Đăng nhập thất bại: {err_msg}")
+
+    def discover_new_devices(self):
+        if not self.token:
+            return
+        self.log("🔍 Đang phát hiện thiết bị Tailscale mới kết nối...", "INFO")
+        self.disc_worker = ApiWorker("/api/v1/provisioning/discover", method="POST", token=self.token, server_url=self.current_server_url)
+        self.disc_worker.finished.connect(self.on_discover_success)
+        self.disc_worker.error.connect(self.on_discover_error)
+        self.disc_worker.start()
+
+    def on_discover_success(self, res):
+        created = res.get("created", [])
+        updated = res.get("updated", [])
+        if created:
+            self.log(f"🎉 Phát hiện & đăng ký mới {len(created)} Box qua Tailscale: {', '.join(created)}", "SUCCESS")
+            self.load_devices()
+        elif updated:
+            self.log(f"✓ Đã cập nhật trạng thái Tailscale cho {len(updated)} Box.", "INFO")
+            self.load_devices()
+
+    def on_discover_error(self, err_msg):
+        self.log(f"⚠️ Không thể quét thiết bị mới: {err_msg}", "WARNING")
 
     def load_devices(self):
         if not self.token:
@@ -1888,8 +1919,8 @@ PersistentKeepalive = 25
             self.table_devices.setItem(row, 2, mac_item)
 
             # Tailscale IP (Non-editable)
-            wg_ip = dev.get("wg_ip") or dev.get("tailscale_ip") or "Chưa có IP"
-            wg_item = QTableWidgetItem(wg_ip)
+            ts_ip = dev.get("tailscale_ip") or dev.get("wg_ip") or "Chưa có IP"
+            wg_item = QTableWidgetItem(ts_ip)
             wg_item.setFlags(wg_item.flags() & ~Qt.ItemIsEditable)
             self.table_devices.setItem(row, 3, wg_item)
 

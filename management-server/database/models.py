@@ -110,6 +110,8 @@ class Device(Base):
     agent_version: Mapped[Optional[str]] = mapped_column(String(50))
     protocol_version: Mapped[int] = mapped_column(Integer, default=1)
     wg_ip: Mapped[Optional[str]] = mapped_column(INET, nullable=True)
+    tailscale_ip: Mapped[Optional[str]] = mapped_column(INET, nullable=True)
+    tailscale_hostname: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     wg_public_key: Mapped[Optional[str]] = mapped_column(String(44))
     hardware_fingerprint: Mapped[Optional[str]] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(20), default="pending")

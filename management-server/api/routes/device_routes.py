@@ -35,7 +35,10 @@ def _device_to_response(device: Device) -> DeviceResponse:
         mac_wifi=device.mac_wifi, mac_ethernet=device.mac_ethernet, serial=device.serial,
         model=device.model, soc=device.soc, ram_mb=device.ram_mb,
         rom_version=device.rom_version, agent_version=device.agent_version,
-        wg_ip=str(device.wg_ip) if device.wg_ip else None, status=device.status, last_seen=device.last_seen,
+        wg_ip=str(device.wg_ip) if device.wg_ip else None,
+        tailscale_ip=str(device.tailscale_ip) if device.tailscale_ip else None,
+        tailscale_hostname=device.tailscale_hostname,
+        status=device.status, last_seen=device.last_seen,
         uptime_seconds=device.uptime_seconds, location=location, tags=tags,
         created_at=device.created_at,
     )

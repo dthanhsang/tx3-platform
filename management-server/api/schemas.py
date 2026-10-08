@@ -105,6 +105,8 @@ class DeviceResponse(BaseModel):
     rom_version: Optional[str]
     agent_version: Optional[str]
     wg_ip: Optional[str]
+    tailscale_ip: Optional[str] = None
+    tailscale_hostname: Optional[str] = None
     status: str
     last_seen: Optional[datetime]
     uptime_seconds: Optional[int]
@@ -185,6 +187,8 @@ class HeartbeatRequest(BaseModel):
     rom_version: Optional[str] = None
     uptime_seconds: int = 0
     wg_ip: Optional[str] = None
+    tailscale_ip: Optional[str] = None
+    tailscale_hostname: Optional[str] = None
     network_state: str = "connected"
     ram_used_mb: Optional[int] = None
     ram_total_mb: Optional[int] = None
