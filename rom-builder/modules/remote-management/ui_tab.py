@@ -62,7 +62,7 @@ class RemoteManagementTab:
             (self.live_remote, "Live Remote", "Remote màn hình thời gian thực H.264"),
             (self.mouse_keyboard, "Mouse / Keyboard / D-Pad", "Điều khiển chuột, bàn phím, D-Pad từ xa"),
             (self.file_transfer, "File Transfer", "Truyền file hai chiều có resume"),
-            (self.remote_adb, "Remote ADB", "Quản trị ADB từ xa qua WireGuard"),
+            (self.remote_adb, "Remote ADB", "Quản trị ADB từ xa qua Tailscale / LAN"),
             (self.apk_install, "APK Install", "Cài đặt APK từ xa"),
             (self.auto_reconnect, "Auto Reconnect", "Tự kết nối lại khi mất mạng"),
             (self.resource_guard, "Resource Guard", "Bảo vệ tài nguyên CPU/RAM/nhiệt"),
@@ -110,8 +110,8 @@ class RemoteManagementTab:
 
         ttk.Label(
             self.server_frame,
-            text="⚠ Không hard-code private key WireGuard. ROM chỉ chứa bootstrap token cho provisioning.",
-            foreground="#9a6700",
+            text="ℹ Bootstrap Token dùng cho tự động cấu hình và định danh thiết bị lần đầu.",
+            foreground="#4b5563",
         ).pack(anchor="w")
 
         # ── Profile Selection ──

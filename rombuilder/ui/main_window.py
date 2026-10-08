@@ -655,11 +655,19 @@ class RomBuilderApp(tk.Tk):
         if not self.firmware_info:
             self.build_checks.set("Chưa phân tích ROM."); return
         system_ready = self.project is not None
+        
+        remote_info = "● Remote Management: TẮT"
+        if hasattr(self, "remote_mgmt_tab_ui") and getattr(self.remote_mgmt_tab_ui, "enabled", None) and self.remote_mgmt_tab_ui.enabled.get():
+            ts_status = "Đã bật Tailscale VPN" if self.remote_mgmt_tab_ui.tailscale.get() else "Tắt Tailscale"
+            rd_status = " + RustDesk Remote" if self.remote_mgmt_tab_ui.rustdesk.get() else ""
+            remote_info = f"✓ Remote Management: {ts_status}{rd_status}"
+
         self.build_checks.set(
             f"{'✓' if self.firmware_info.valid else '✗'} Cấu trúc gói firmware\n"
             f"{'✓' if self.firmware_info.checksum_ok else '✗'} CRC firmware\n"
             f"{'✓' if system_ready else '○'} Phân vùng system và danh sách APK\n"
             f"{'✓' if self.changes_applied else '○'} Cấu hình thay đổi {'đã' if self.changes_applied else 'chưa'} được áp dụng\n"
+            f"{remote_info}\n"
             f"Thêm mới: {len(self.apk_infos)} APK • Gỡ: {len(self.removal_paths)} APK"
         )
 
@@ -773,9 +781,20 @@ class RomBuilderApp(tk.Tk):
                     self.progress["value"] = 100; self.percent_text.set("100%")
                     self.status_text.set("Đóng gói và xác minh hoàn tất")
                     self.log(f"ROM đầu ra: {event[1]}")
+                    
+                    remote_summary = ""
+                    if hasattr(self, "remote_mgmt_tab_ui") and getattr(self.remote_mgmt_tab_ui, "enabled", None) and self.remote_mgmt_tab_ui.enabled.get():
+                        remote_summary = "\n\n🚀 ĐÃ TÍCH HỢP TỰ ĐỘNG (Zero-Touch):\n"
+                        if self.remote_mgmt_tab_ui.tailscale.get():
+                            remote_summary += " • Tailscale VPN (v1.78.1 ARM Binary + Autostart Service)\n"
+                        if self.remote_mgmt_tab_ui.rustdesk.get():
+                            remote_summary += " • RustDesk Remote App (/system/priv-app)\n"
+                        if self.remote_mgmt_tab_ui.auto_adb.get():
+                            remote_summary += " • Auto ADB TCP Port 5555\n"
+
                     if self.firmware_info and self.firmware_info.platform == "Allwinner":
-                        messagebox.showinfo("PhoenixSuit ROM hoàn tất", f"Đã tạo và kiểm tra checksum Vsystem:\n{event[1]}\n\nHãy chọn file này trong PhoenixSuit để flash.")
-                    elif self.ask_flash_after_build.get() and messagebox.askyesno("Đóng gói hoàn tất", f"Đã tạo và xác minh ROM:\n{event[1]}\n\nChuyển sang USB Burning Tool để flash ROM?"):
+                        messagebox.showinfo("PhoenixSuit ROM hoàn tất", f"Đã tạo và kiểm tra checksum Vsystem:\n{event[1]}{remote_summary}\n\nHãy chọn file này trong PhoenixSuit để flash.")
+                    elif self.ask_flash_after_build.get() and messagebox.askyesno("Đóng gói hoàn tất", f"Đã tạo và xác minh ROM:\n{event[1]}{remote_summary}\n\nChuyển sang USB Burning Tool để flash ROM?"):
                         tool_path = self.burning_tool_path.get().strip()
                         if not tool_path or not Path(tool_path).is_file():
                             self.auto_detect_burning_tool(); tool_path = self.burning_tool_path.get().strip()
@@ -784,7 +803,7 @@ class RomBuilderApp(tk.Tk):
                         else:
                             messagebox.showwarning("Thiếu USB Burning Tool", "ROM đã tạo thành công nhưng chưa thể chuyển sang công cụ flash.")
                     else:
-                        messagebox.showinfo("Hoàn tất", f"Đã tạo và xác minh ROM:\n{event[1]}")
+                        messagebox.showinfo("Hoàn tất", f"Đã tạo và xác minh ROM:\n{event[1]}{remote_summary}")
                 elif event[0] == "burn_launched":
                     self.progress["value"] = 100; self.percent_text.set("100%")
                     self.status_text.set("ROM đã được nạp vào USB Burning Tool")

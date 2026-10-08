@@ -1,6 +1,6 @@
 """TX3 ROM Builder - Remote Management Module
 Integrates Remote Management features into ROM Builder v0.7.0.
-Adds checkbox UI, agent injection, WireGuard config, auto ADB, and init scripts.
+Adds checkbox UI, agent injection, Tailscale VPN config, auto ADB, and init scripts.
 
 Version: 1.0.0
 """
