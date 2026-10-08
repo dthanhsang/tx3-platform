@@ -182,7 +182,12 @@ class AmlogicProject:
                 rm_path = Path(__file__).resolve().parents[2] / "rom-builder" / "modules" / "remote-management"
                 if str(rm_path) not in sys.path:
                     sys.path.insert(0, str(rm_path))
-                import __init__ as rm_module
+                import importlib.util
+                rm_init_path = rm_path / "__init__.py"
+                spec = importlib.util.spec_from_file_location("tx3_remote_management_module", rm_init_path)
+                rm_module = importlib.util.module_from_spec(spec)
+                sys.modules["tx3_remote_management_module"] = rm_module
+                spec.loader.exec_module(rm_module)
                 
                 # Append preinstall additions for remote management
                 script_path = self.work / "preinstall.rombuilder.sh"
