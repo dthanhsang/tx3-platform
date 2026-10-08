@@ -531,53 +531,69 @@ class RomBuildWorker(QThread):
         self.bootstrap_token = bootstrap_token
 
     def run(self):
-        import time, shutil
+        import time, shutil, sys
+        from pathlib import Path
         try:
             filename = os.path.basename(self.fw_path)
             base_name, ext = os.path.splitext(filename)
             out_filename = f"{base_name}_TX3_Custom_RemoteManaged{ext}"
             out_filepath = os.path.join(self.output_dir, out_filename)
 
-            self.progress_signal.emit(10, f"Bắt đầu khởi tạo quy trình đóng gói ROM cho: {filename}", "INFO")
-            time.sleep(1)
+            self.progress_signal.emit(5, f"Bắt đầu quy trình đóng gói ROM thật cho: {filename}", "INFO")
 
-            self.progress_signal.emit(25, "Bung phân vùng Firmware Amlogic / Rockchip (imgRePacker & simg2img)...", "INFO")
-            time.sleep(1.5)
+            # Make sure module paths are available
+            root_dir = Path(__file__).resolve().parent
+            if str(root_dir) not in sys.path:
+                sys.path.insert(0, str(root_dir))
+            rm_path = root_dir / "rom-builder" / "modules" / "remote-management"
+            if str(rm_path) not in sys.path:
+                sys.path.insert(0, str(rm_path))
 
-            self.progress_signal.emit(45, "Mounting phân vùng system.img & boot.img...", "INFO")
-            time.sleep(1.2)
+            import __init__ as rm_module
+            from rombuilder.core.pipeline import AmlogicProject
 
-            injections = []
-            if self.enable_remote:
-                injections.append("TX3 Remote Management Agent (com.tx3.agent)")
-            if self.auto_adb:
-                injections.append("Mở sẵn ADB TCP 5555 ngầm (persist.adb.tcp.port=5555)")
-            if self.enable_wg:
-                injections.append(f"Cấu hình Tailscale VPN Client (Server: {self.server_url})")
-            if self.disable_yt_voice:
-                injections.append("Gỡ bỏ TopAppMonitorAccessibilityService (Vô hiệu hóa đọc Youtube)")
-            if self.root:
-                injections.append("Tích hợp SuperSU / Magisk Root Binary")
-            if self.clean_bloat:
-                injections.append("Dọn dẹp Bloatware & App rác hệ thống")
+            # Build Remote Management Config object
+            remote_config = rm_module.RemoteManagementConfig(
+                enabled=self.enable_remote,
+                auto_start=True,
+                tailscale=self.enable_wg,
+                tailscale_authkey="tskey-auth-kQEiimCRMm11CNTRL-K99q54JBSrEwPpjq7r7pqENLesKEXd4N",
+                watchdog=self.watchdog,
+                auto_adb=self.auto_adb,
+                server_url=self.server_url,
+                bootstrap_token=self.bootstrap_token
+            )
 
-            self.progress_signal.emit(65, f"Đang nhúng tùy chỉnh: {', '.join(injections)}", "INFO")
-            time.sleep(2)
+            # Progress callback wrapper
+            def update_progress(pct, msg):
+                self.progress_signal.emit(pct, msg, "INFO")
 
-            self.progress_signal.emit(85, "Đóng gói lại phân vùng system.img & Đóng dấu mã băm SHA256/CRC32...", "INFO")
-            
-            # Copy source file to target output path as simulated real build output
-            shutil.copy2(self.fw_path, out_filepath)
-            time.sleep(1.5)
+            self.progress_signal.emit(10, "Khởi tạo pipeline Amlogic & kiểm tra cấu trúc ROM...", "INFO")
+            project = AmlogicProject(self.fw_path)
 
-            self.progress_signal.emit(100, f"ĐÓNG GÓI HOÀN TẤT! File ROM đầu ra đã xuất tại: {out_filepath}", "SUCCESS")
+            self.progress_signal.emit(20, "Bung phân vùng system.img từ Firmware...", "INFO")
+            project.prepare(progress=lambda p, m: update_progress(20 + int(p * 0.3), m))
+
+            self.progress_signal.emit(50, "Đang nhúng TX3 Remote Agent, Tailscale VPN & Tối ưu hóa 24/7...", "INFO")
+            root_mode = "Tích hợp SuperSU từ ZIP" if self.root else "Giữ nguyên root hiện tại"
+            project.apply(
+                additions=[],
+                removals=[],
+                root_mode=root_mode,
+                remote_config=remote_config,
+                progress=lambda p, m: update_progress(50 + int(p * 0.3), m)
+            )
+
+            self.progress_signal.emit(80, "Đóng gói lại phân vùng system.img & Đóng dấu checksum...", "INFO")
+            project.build(out_filepath, progress=lambda p, m: update_progress(80 + int(p * 0.2), m))
+
+            self.progress_signal.emit(100, f"ĐÓNG GÓI HOÀN TẤT! ROM tùy chỉnh thật đã xuất tại: {out_filepath}", "SUCCESS")
             self.finished_signal.emit(True, out_filepath)
 
         except Exception as e:
-            self.progress_signal.emit(100, f"LỖI ĐÓNG GÓI ROM: {str(e)}", "ERROR")
-            self.finished_signal.emit(False, str(e))
-
-
+            err_msg = str(e)
+            self.progress_signal.emit(100, f"LỖI ĐÓNG GÓI ROM THẬT: {err_msg}", "ERROR")
+            self.finished_signal.emit(False, err_msg)
 class RomBuilderTab(QWidget):
     def __init__(self, parent=None, log_callback=None):
         super().__init__(parent)
