@@ -19,7 +19,9 @@ class RemoteManagementConfig:
     """Configuration for Remote Management injection into ROM."""
     enabled: bool = True
     auto_start: bool = True
-    wireguard: bool = True
+    tailscale: bool = True
+    tailscale_authkey: str = "tskey-auth-kQEiimCRMm11CNTRL-K99q54JBSrEwPpjq7r7pqENLesKEXd4N"
+    rustdesk: bool = True
     live_remote: bool = True
     mouse_keyboard_dpad: bool = True
     file_transfer: bool = True
@@ -44,7 +46,9 @@ class RemoteManagementConfig:
         return {
             "enabled": self.enabled,
             "auto_start": self.auto_start,
-            "wireguard": self.wireguard,
+            "tailscale": self.tailscale,
+            "tailscale_authkey": self.tailscale_authkey,
+            "rustdesk": self.rustdesk,
             "live_remote": self.live_remote,
             "mouse_keyboard_dpad": self.mouse_keyboard_dpad,
             "file_transfer": self.file_transfer,
@@ -152,6 +156,32 @@ def generate_init_script(config: RemoteManagementConfig) -> str:
         "",
     ]
 
+    if config.tailscale:
+        parts.extend([
+            "# Tailscale Auto-Start & Auto-Connect",
+            "mkdir -p /dev/net 2>/dev/null",
+            "[ ! -c /dev/net/tun ] && mknod /dev/net/tun c 10 200 2>/dev/null",
+            "chmod 0666 /dev/net/tun 2>/dev/null",
+            "mkdir -p /data/adb/tailscale 2>/dev/null",
+            "if [ -f /system/bin/tailscaled ]; then",
+            "    pkill -9 tailscaled 2>/dev/null",
+            "    /system/bin/tailscaled --state=/data/adb/tailscale/tailscaled.state --socket=/data/adb/tailscale/tailscaled.sock --tun=userspace-networking > /data/adb/tailscale/tailscaled.log 2>&1 &",
+            "    sleep 3",
+            "    /system/bin/tailscale --socket=/data/adb/tailscale/tailscaled.sock up --authkey=" + config.tailscale_authkey + " --hostname=tx3-box-$(getprop ro.serialno || cat /sys/class/net/eth0/address 2>/dev/null | tr -d ':') --accept-dns=false &",
+            "fi",
+            "",
+        ])
+
+    
+    if config.rustdesk:
+        parts.extend([
+            "# RustDesk Service Auto-Start & Auto-Listen on Tailscale IP",
+            "if pm list packages | grep -q com.caracald.rustdesk; then",
+            "    am startservice -n com.caracald.rustdesk/.service.MainService 2>/dev/null",
+            "    am start -n com.caracald.rustdesk/.MainActivity 2>/dev/null",
+            "fi",
+            "",
+        ])
     if config.auto_adb:
         parts.extend([
             "# Auto-enable ADB",

@@ -10,6 +10,30 @@ import urllib.error
 import urllib.parse
 from datetime import datetime
 
+# Safe redirection for PyInstaller --noconsole mode (sys.stdout / sys.stderr are None)
+if sys.stdout is None:
+    class DummyStream:
+        def write(self, data): pass
+        def flush(self): pass
+    sys.stdout = DummyStream()
+if sys.stderr is None:
+    sys.stderr = sys.stdout
+
+def handle_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    import traceback
+    err_msg = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+    try:
+        from PyQt5.QtWidgets import QMessageBox, QApplication
+        if QApplication.instance():
+            QMessageBox.critical(None, "Lỗi Khởi Động Ứng Dụng", f"Ứng dụng gặp lỗi không thể khởi chạy:\n\n{err_msg}")
+    except Exception:
+        pass
+
+sys.excepthook = handle_exception
+
 from PyQt5.QtWidgets import (
     QTabWidget, QSpinBox, QComboBox, QCheckBox, QRadioButton, QButtonGroup, QProgressBar,
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
@@ -159,7 +183,7 @@ class PushFileWorker(QThread):
     progress = pyqtSignal(str)
     finished = pyqtSignal(bool, str, str)
 
-    def __init__(self, target_ip, local_filepath, adb_cmd="adb"):
+    def __init__(self, target_ip, local_filepath, remote_dir="/sdcard/Download", adb_cmd="adb"):
         super().__init__()
         self.target_ip = target_ip
         self.local_filepath = local_filepath
@@ -172,7 +196,7 @@ class PushFileWorker(QThread):
             subprocess.run([self.adb_cmd, "connect", target_adb], capture_output=True, text=True, timeout=8)
             
             filename = os.path.basename(self.local_filepath)
-            remote_path = f"/sdcard/Download/{filename}"
+            remote_path = f"{self.remote_dir.rstrip('/')}/{filename}"
             self.progress.emit(f"[ADB PUSH] Đang truyền file '{filename}' sang {target_adb}:{remote_path}...")
 
             push_res = subprocess.run(
@@ -202,7 +226,7 @@ class MultiPushWorker(QThread):
 
     def run(self):
         filename = os.path.basename(self.local_filepath)
-        remote_path = f"/sdcard/Download/{filename}"
+        remote_path = f"{self.remote_dir.rstrip('/')}/{filename}"
         total = len(self.target_boxes)
         success_count = 0
         results = []
@@ -1131,6 +1155,10 @@ class TX3ControllerApp(QMainWindow):
         login_layout.setContentsMargins(10, 10, 10, 8)
         login_layout.setSpacing(6)
 
+        self.txt_login_server_url = QLineEdit(DEFAULT_SERVER_URL)
+        self.txt_login_server_url.setPlaceholderText("http://100.95.168.28:8400")
+        self.txt_login_server_url.setToolTip("Địa chỉ Server Quản Lý Tailscale IP")
+
         self.txt_username = QLineEdit()
         self.txt_username.setPlaceholderText("Tên đăng nhập")
         self.txt_password = QLineEdit()
@@ -1139,6 +1167,8 @@ class TX3ControllerApp(QMainWindow):
         self.btn_login = QPushButton("Đăng nhập")
         self.btn_login.clicked.connect(self.handle_login)
 
+        login_layout.addWidget(QLabel("Server:"))
+        login_layout.addWidget(self.txt_login_server_url)
         login_layout.addWidget(self.txt_username)
         login_layout.addWidget(self.txt_password)
         login_layout.addWidget(self.btn_login)
@@ -1166,15 +1196,20 @@ class TX3ControllerApp(QMainWindow):
         self.btn_export_csv.clicked.connect(self.export_devices_csv)
         self.btn_export_csv.setEnabled(False)
 
+        self.txt_search_dev = QLineEdit()
+        self.txt_search_dev.setPlaceholderText("🔍 Tìm kiếm theo Tên Box, Địa chỉ MAC, IP, Location...")
+        self.txt_search_dev.setClearButtonEnabled(True)
+        self.txt_search_dev.textChanged.connect(self.filter_devices_table)
+
         top_dev_layout.addWidget(self.btn_refresh)
         top_dev_layout.addWidget(self.btn_select_all)
         top_dev_layout.addWidget(self.btn_export_csv)
-        top_dev_layout.addStretch()
+        top_dev_layout.addWidget(self.txt_search_dev)
         devices_layout.addLayout(top_dev_layout)
 
         self.table_devices = QTableWidget()
-        self.table_devices.setColumnCount(5)
-        self.table_devices.setHorizontalHeaderLabels(["Trạng thái", "Tên Box ✏️", "IP WireGuard", "Địa điểm (Site)", "ROM Ver"])
+        self.table_devices.setColumnCount(6)
+        self.table_devices.setHorizontalHeaderLabels(["Trạng thái", "Tên Box ✏️", "Địa chỉ MAC", "IP Tailscale", "Địa điểm (Site)", "ROM Ver"])
         self.table_devices.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.table_devices.setSelectionBehavior(QTableWidget.SelectRows)
         self.table_devices.setSelectionMode(QTableWidget.ExtendedSelection)
@@ -1363,8 +1398,22 @@ class TX3ControllerApp(QMainWindow):
         file_sel_layout.addWidget(self.btn_browse)
         file_layout.addLayout(file_sel_layout)
 
+        remote_dir_layout = QHBoxLayout()
+        remote_dir_layout.addWidget(QLabel("Thư mục đích trên Box:"))
+        self.cbo_remote_dir = QComboBox()
+        self.cbo_remote_dir.setEditable(True)
+        self.cbo_remote_dir.addItems([
+            "/sdcard/Download",
+            "/sdcard",
+            "/data/local/tmp",
+            "/system/app",
+            "/system/priv-app"
+        ])
+        remote_dir_layout.addWidget(self.cbo_remote_dir)
+        file_layout.addLayout(remote_dir_layout)
+
         btn_transfer_layout = QHBoxLayout()
-        self.btn_push = QPushButton("⚡ Truyền File sang Box (/sdcard/Download)")
+        self.btn_push = QPushButton("⚡ Truyền File sang Box")
         self.btn_push.setObjectName("btnPush")
         self.btn_push.setEnabled(False)
         self.btn_push.clicked.connect(self.push_file)
@@ -1527,17 +1576,23 @@ class TX3ControllerApp(QMainWindow):
         self.statusBar.showMessage("Đã sao chép nhật ký vào Clipboard!")
         self.log("Đã sao chép nhật ký vào Clipboard.", "INFO")
 
-    def get_wireguard_local_ip(self):
-        """Phát hiện IP máy tính trong dải mạng VPN 10.88.0.x"""
+    def get_tailscale_local_ip(self):
+        """Phát hiện IP máy tính trong dải mạng Tailscale 100.x.y.z"""
+        try:
+            res = subprocess.run(["tailscale", "ip", "-4"], capture_output=True, text=True, timeout=5)
+            if res.returncode == 0 and res.stdout.strip():
+                return res.stdout.strip()
+        except Exception:
+            pass
         try:
             if sys.platform == "win32":
                 res = subprocess.run(["ipconfig"], capture_output=True, text=True)
-                match = re.search(r"10\.88\.0\.\d+", res.stdout)
+                match = re.search(r"100\.\d+\.\d+\.\d+", res.stdout)
                 if match:
                     return match.group(0)
             else:
                 res = subprocess.run(["ip", "a"], capture_output=True, text=True)
-                match = re.search(r"10\.88\.0\.\d+", res.stdout)
+                match = re.search(r"100\.\d+\.\d+\.\d+", res.stdout)
                 if match:
                     return match.group(0)
         except Exception:
@@ -1575,23 +1630,19 @@ class TX3ControllerApp(QMainWindow):
             except Exception:
                 pass
 
-        wg_installed = sys.platform == "win32" and os.path.exists(r"C:\Program Files\WireGuard\wireguard.exe")
-        wg_ip = self.get_wireguard_local_ip()
+        ts_ip = self.get_tailscale_local_ip()
 
-        if wg_ip:
-            wg_status = f"🟢 WireGuard VPN: ĐÃ KẾT NỐI (IP Máy Tính: {wg_ip})"
-            wg_color = "#15803d"
-        elif wg_installed:
-            wg_status = "🔴 WireGuard VPN: Chưa kết nối (Bấm nút bên dưới để bật)"
-            wg_color = "#b91c1c"
+        if ts_ip:
+            ts_status = f"🟢 Tailscale VPN: ĐÃ KẾT NỐI (IP Máy Tính: {ts_ip})"
+            ts_color = "#15803d"
         else:
-            wg_status = "⚠️ Chưa cài đặt WireGuard Client"
-            wg_color = "#b91c1c"
+            ts_status = "🔴 Tailscale VPN: Chưa kết nối (Bật app Tailscale trên Windows)"
+            ts_color = "#b91c1c"
 
         if scrcpy_found and adb_found:
-            self.lbl_tools_status.setText(f"✓ Bộ công cụ Scrcpy & ADB: Sẵn sàng ({self.scrcpy_bin})\n✓ {wg_status}")
-            self.lbl_tools_status.setStyleSheet(f"color: {wg_color}; font-weight: 600;")
-            self.log(f"Đã kiểm tra môi trường: Scrcpy/ADB Sẵn sàng | {wg_status}", "INFO")
+            self.lbl_tools_status.setText(f"✓ Bộ công cụ Scrcpy & ADB: Sẵn sàng ({self.scrcpy_bin})\n✓ {ts_status}")
+            self.lbl_tools_status.setStyleSheet(f"color: {ts_color}; font-weight: 600;")
+            self.log(f"Đã kiểm tra môi trường: Scrcpy/ADB Sẵn sàng | {ts_status}", "INFO")
         else:
             self.lbl_tools_status.setText(f"⚠️ Chưa tìm thấy Scrcpy / ADB!\nBấm nút bên dưới để phần mềm tự động tải & giải nén.")
             self.lbl_tools_status.setStyleSheet("color: #b91c1c; font-weight: 600;")
@@ -1737,8 +1788,22 @@ PersistentKeepalive = 25
                 )
 
     def handle_login(self):
+        ts_ip = self.get_tailscale_local_ip()
+        if not ts_ip:
+            QMessageBox.critical(
+                self, "Yêu cầu kết nối Tailscale VPN",
+                "⚠️ BẮT BUỘC KẾT NỐI TAILSCALE VPN!\n\n"
+                "Hệ thống đang hoạt động thuần trong dải mạng nội bộ Tailscale.\n"
+                "Vui lòng bật ứng dụng Tailscale trên máy tính trước khi đăng nhập."
+            )
+            self.log("❌ Đăng nhập bị chặn: Máy tính chưa bật/kết nối mạng Tailscale VPN.", "ERROR")
+            return
+
         username = self.txt_username.text().strip()
         password = self.txt_password.text().strip()
+        server_input = self.txt_login_server_url.text().strip()
+        if server_input:
+            self.current_server_url = server_input
 
         if not username or not password:
             QMessageBox.warning(self, "Cảnh báo", "Vui lòng nhập Tên đăng nhập và Mật khẩu!")
@@ -1746,7 +1811,7 @@ PersistentKeepalive = 25
 
         self.btn_login.setEnabled(False)
         self.statusBar.showMessage("Đang đăng nhập...")
-        self.log(f"Đang gửi yêu cầu đăng nhập tài khoản '{username}' tới {SERVER_URL}...", "INFO")
+        self.log(f"Đang gửi yêu cầu đăng nhập tài khoản '{username}' tới {self.current_server_url}...", "INFO")
 
         self.login_worker = ApiWorker(
             "/api/v1/auth/login",
@@ -1816,30 +1881,50 @@ PersistentKeepalive = 25
             name_item.setFlags(name_item.flags() | Qt.ItemIsEditable)
             self.table_devices.setItem(row, 1, name_item)
 
-            # WireGuard IP (Non-editable)
-            wg_ip = dev.get("wg_ip") or "Chưa có IP"
+            # MAC Address (Non-editable)
+            mac = dev.get("mac_address") or dev.get("mac_wifi") or dev.get("mac_ethernet") or "—"
+            mac_item = QTableWidgetItem(mac)
+            mac_item.setFlags(mac_item.flags() & ~Qt.ItemIsEditable)
+            self.table_devices.setItem(row, 2, mac_item)
+
+            # Tailscale IP (Non-editable)
+            wg_ip = dev.get("wg_ip") or dev.get("tailscale_ip") or "Chưa có IP"
             wg_item = QTableWidgetItem(wg_ip)
             wg_item.setFlags(wg_item.flags() & ~Qt.ItemIsEditable)
-            self.table_devices.setItem(row, 2, wg_item)
+            self.table_devices.setItem(row, 3, wg_item)
 
             # Location / Site (Non-editable)
             loc = dev.get("location") or {}
             site = loc.get("site") or loc.get("customer") or "—"
             site_item = QTableWidgetItem(site)
             site_item.setFlags(site_item.flags() & ~Qt.ItemIsEditable)
-            self.table_devices.setItem(row, 3, site_item)
+            self.table_devices.setItem(row, 4, site_item)
 
             # ROM Version (Non-editable)
             rom = dev.get("rom_version") or "1.0.0"
             rom_item = QTableWidgetItem(rom)
             rom_item.setFlags(rom_item.flags() & ~Qt.ItemIsEditable)
-            self.table_devices.setItem(row, 4, rom_item)
+            self.table_devices.setItem(row, 5, rom_item)
 
         self.is_populating = False
         self.btn_select_all.setEnabled(bool(self.devices))
         self.btn_export_csv.setEnabled(bool(self.devices))
         msg = f"Đã cập nhật {len(self.devices)} thiết bị ({online_cnt} Online)."
         self.statusBar.showMessage(msg)
+
+    def filter_devices_table(self):
+        query = self.txt_search_dev.text().strip().lower()
+        for row in range(self.table_devices.rowCount()):
+            match = False
+            if not query:
+                match = True
+            else:
+                for col in range(self.table_devices.columnCount()):
+                    item = self.table_devices.item(row, col)
+                    if item and query in item.text().lower():
+                        match = True
+                        break
+            self.table_devices.setRowHidden(row, not match)
 
     def on_load_devices_error(self, err_msg):
         self.statusBar.showMessage(f"Lỗi tải danh sách: {err_msg}")
@@ -2161,6 +2246,7 @@ PersistentKeepalive = 25
                 self.btn_push.setEnabled(True)
     def push_file(self):
         filepath = self.txt_filepath.text().strip()
+        remote_dir = self.cbo_remote_dir.currentText().strip() or "/sdcard/Download"
         if not filepath or not os.path.exists(filepath):
             QMessageBox.warning(self, "Lỗi", "File không tồn tại!")
             return
@@ -2175,8 +2261,8 @@ PersistentKeepalive = 25
             box = online_boxes[0]
             wg_ip = box["ip"]
             dev_name = box["name"]
-            self.log(f"Bắt đầu truyền file '{filename}' sang Box '{dev_name}' ({wg_ip})...", "ADB")
-            self.push_worker = PushFileWorker(wg_ip, filepath, adb_cmd=self.adb_bin)
+            self.log(f"Bắt đầu truyền file '{filename}' sang Box '{dev_name}' ({wg_ip}:{remote_dir})...", "ADB")
+            self.push_worker = PushFileWorker(wg_ip, filepath, remote_dir=remote_dir, adb_cmd=self.adb_bin)
             self.push_worker.progress.connect(lambda msg: self.log(msg, "ADB"))
             self.push_worker.finished.connect(self.on_push_finished)
             self.push_worker.start()

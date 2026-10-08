@@ -42,7 +42,9 @@ class RemoteManagementTab:
         self.features_frame.pack(fill="x", pady=(0, 12))
 
         self.auto_start = tk.BooleanVar(value=True)
-        self.wireguard = tk.BooleanVar(value=True)
+        self.tailscale = tk.BooleanVar(value=True)
+        self.rustdesk = tk.BooleanVar(value=True)
+        self.tailscale_authkey = tk.StringVar(value="tskey-auth-kQEiimCRMm11CNTRL-K99q54JBSrEwPpjq7r7pqENLesKEXd4N")
         self.live_remote = tk.BooleanVar(value=True)
         self.mouse_keyboard = tk.BooleanVar(value=True)
         self.file_transfer = tk.BooleanVar(value=True)
@@ -55,7 +57,8 @@ class RemoteManagementTab:
 
         features = [
             (self.auto_start, "Auto Start", "Tự động khởi động agent khi boot"),
-            (self.wireguard, "WireGuard", "Tích hợp WireGuard VPN quản trị"),
+            (self.tailscale, "Tailscale VPN", "Tích hợp Tailscale VPN quản trị tự động"),
+            (self.rustdesk, "RustDesk Remote", "Tích hợp RustDesk tự khởi động để điều khiển & truyền file từ điện thoại"),
             (self.live_remote, "Live Remote", "Remote màn hình thời gian thực H.264"),
             (self.mouse_keyboard, "Mouse / Keyboard / D-Pad", "Điều khiển chuột, bàn phím, D-Pad từ xa"),
             (self.file_transfer, "File Transfer", "Truyền file hai chiều có resume"),
@@ -163,7 +166,8 @@ class RemoteManagementTab:
         """Update status text based on current configuration."""
         features_on = []
         if self.auto_start.get(): features_on.append("Auto Start")
-        if self.wireguard.get(): features_on.append("WireGuard")
+        if self.tailscale.get(): features_on.append("Tailscale VPN")
+        if self.rustdesk.get(): features_on.append("RustDesk Remote")
         if self.live_remote.get(): features_on.append("Live Remote")
         if self.file_transfer.get(): features_on.append("File Transfer")
         if self.remote_adb.get(): features_on.append("Remote ADB")
@@ -197,7 +201,9 @@ class RemoteManagementTab:
         config = RemoteManagementConfig(
             enabled=self.enabled.get(),
             auto_start=self.auto_start.get(),
-            wireguard=self.wireguard.get(),
+            tailscale=self.tailscale.get(),
+            rustdesk=self.rustdesk.get(),
+            tailscale_authkey=self.tailscale_authkey.get(),
             live_remote=self.live_remote.get(),
             mouse_keyboard_dpad=self.mouse_keyboard.get(),
             file_transfer=self.file_transfer.get(),
