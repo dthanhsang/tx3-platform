@@ -9,17 +9,25 @@ from pathlib import Path
 
 
 def resource_root() -> Path:
-    return Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parents[3]))
+    if getattr(sys, "_MEIPASS", None):
+        return Path(sys._MEIPASS)
+    if getattr(sys, "frozen", False):
+        return Path(sys.executable).resolve().parent
+    return Path(__file__).resolve().parents[2]
 
 
 def tools_root() -> Path:
-    bundled = resource_root() / "tools" / "cygwin"
-    if bundled.exists():
-        return bundled
-    development = Path(__file__).resolve().parents[3] / "work" / "tools" / "cygwin-current"
-    if development.exists():
-        return development
-    raise FileNotFoundError("Không tìm thấy bộ công cụ EXT4/debugfs")
+    res = resource_root()
+    search_dirs = [
+        res / "tools" / "cygwin",
+        Path.cwd() / "tools" / "cygwin",
+        Path(__file__).resolve().parents[2] / "tools" / "cygwin",
+        Path(__file__).resolve().parents[3] / "work" / "tools" / "cygwin-current",
+    ]
+    for d in search_dirs:
+        if d.exists() and (d / "usr" / "sbin" / "debugfs.exe").exists():
+            return d
+    raise FileNotFoundError("Không tìm thấy bộ công cụ EXT4/debugfs tại thư mục tools/cygwin")
 
 
 def _environment():

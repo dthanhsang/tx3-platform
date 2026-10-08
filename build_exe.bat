@@ -22,7 +22,7 @@ if %errorlevel% neq 0 (
 
 echo.
 echo [2/3] Bat dau dong goi file TX3_Control_GUI.exe (Gop cac module rom-builder va rombuilder)...
-python -m PyInstaller --onefile --noconsole --name TX3_Control_GUI --add-data "rom-builder;rom-builder" --add-data "rombuilder;rombuilder" tx3_control_gui.py
+python -m PyInstaller --onefile --noconsole --name TX3_Control_GUI --add-data "rom-builder;rom-builder" --add-data "rombuilder;rombuilder" --add-data "tools;tools" tx3_control_gui.py
 
 echo.
 if exist "dist\TX3_Control_GUI.exe" (
