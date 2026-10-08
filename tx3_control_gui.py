@@ -48,7 +48,7 @@ DEFAULT_SERVER_URL = "http://100.95.168.28:8400"
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 
 SCRCPY_WIN_URL = "https://github.com/Genymobile/scrcpy/releases/download/v2.4/scrcpy-win64-v2.4.zip"
-WIREGUARD_WIN_URL = "https://download.wireguard.com/windows-client/wireguard-installer.exe"
+WIREGUARD_WIN_URL = "https://download.tailscale.com/windows-client/tailscale-installer.exe"
 
 
 class DownloadWorker(QThread):
@@ -174,7 +174,7 @@ class LaunchScrcpyWorker(QThread):
             subprocess.Popen(cmd)
             self.finished.emit(True, f"Đã mở cửa sổ Remote Scrcpy tới Box ({target_adb}) thành công!", adb_out)
         except subprocess.TimeoutExpired:
-            self.finished.emit(False, f"Kết nối ADB tới {target_adb} quá thời gian (Timeout 8s). Vui lòng kiểm tra WireGuard VPN!", "Timeout")
+            self.finished.emit(False, f"Kết nối ADB tới {target_adb} quá thời gian (Timeout 8s). Vui lòng kiểm tra Tailscale VPN!", "Timeout")
         except Exception as e:
             self.finished.emit(False, f"Lỗi khởi chạy Scrcpy: {str(e)}", str(e))
 
@@ -553,7 +553,7 @@ class RomBuildWorker(QThread):
             if self.auto_adb:
                 injections.append("Mở sẵn ADB TCP 5555 ngầm (persist.adb.tcp.port=5555)")
             if self.enable_wg:
-                injections.append(f"Cấu hình WireGuard VPN Client (Server: {self.server_url})")
+                injections.append(f"Cấu hình Tailscale VPN Client (Server: {self.server_url})")
             if self.disable_yt_voice:
                 injections.append("Gỡ bỏ TopAppMonitorAccessibilityService (Vô hiệu hóa đọc Youtube)")
             if self.root:
@@ -651,15 +651,15 @@ class RomBuilderTab(QWidget):
         self.chk_auto_adb = QCheckBox("✓ Tự động mở sẵn cổng ADB TCP 5555 ngầm (Vĩnh viễn)")
         self.chk_auto_adb.setChecked(True)
 
-        self.chk_wireguard = QCheckBox("✓ Khởi tạo WireGuard VPN Client tự động (Zero-Touch Provisioning)")
-        self.chk_wireguard.setChecked(True)
+        self.chk_tailscale = QCheckBox("✓ Khởi tạo Tailscale VPN Client tự động (Zero-Touch Provisioning)")
+        self.chk_tailscale.setChecked(True)
 
         self.chk_watchdog = QCheckBox("✓ Bật Watchdog & Resource Guard (Tự restart agent khi treo/lag)")
         self.chk_watchdog.setChecked(True)
 
         remote_layout.addWidget(self.chk_enable_remote)
         remote_layout.addWidget(self.chk_auto_adb)
-        remote_layout.addWidget(self.chk_wireguard)
+        remote_layout.addWidget(self.chk_tailscale)
         remote_layout.addWidget(self.chk_watchdog)
 
         # Server Settings
@@ -812,7 +812,7 @@ class RomBuilderTab(QWidget):
             output_dir=out_dir,
             enable_remote=self.chk_enable_remote.isChecked(),
             auto_adb=self.chk_auto_adb.isChecked(),
-            enable_wg=self.chk_wireguard.isChecked(),
+            enable_wg=self.chk_tailscale.isChecked(),
             watchdog=self.chk_watchdog.isChecked(),
             root=self.chk_root.isChecked(),
             clean_bloat=self.chk_clean_bloat.isChecked(),
@@ -1124,13 +1124,13 @@ class TX3ControllerApp(QMainWindow):
         left_layout.setContentsMargins(0, 0, 0, 0)
         left_layout.setSpacing(6)
 
-        # 0. WireGuard VPN & Tools Status Box (Placed TOP LEFT before Login for instant VPN connection)
-        tools_box = QGroupBox("⚡ Quản lý WireGuard VPN Network & Công cụ")
+        # 0. Tailscale VPN & Tools Status Box (Placed TOP LEFT before Login for instant VPN connection)
+        tools_box = QGroupBox("⚡ Quản lý Tailscale VPN Network & Công cụ")
         tools_layout = QVBoxLayout(tools_box)
         tools_layout.setContentsMargins(10, 10, 10, 10)
         tools_layout.setSpacing(6)
 
-        self.lbl_tools_status = QLabel("Đang kiểm tra Scrcpy / ADB / WireGuard...")
+        self.lbl_tools_status = QLabel("Đang kiểm tra Scrcpy / ADB / Tailscale...")
         self.lbl_tools_status.setStyleSheet("color: #050505; font-weight: 600; font-size: 12px;")
         self.lbl_tools_status.setWordWrap(True)
         tools_layout.addWidget(self.lbl_tools_status)
@@ -1139,7 +1139,7 @@ class TX3ControllerApp(QMainWindow):
         self.btn_toggle_vpn = QPushButton("⚡ BẬT / TẮT WIREGUARD VPN NETWORK")
         self.btn_toggle_vpn.setObjectName("btnVpn")
         self.btn_toggle_vpn.setMinimumHeight(38)
-        self.btn_toggle_vpn.clicked.connect(self.toggle_wireguard_vpn)
+        self.btn_toggle_vpn.clicked.connect(self.toggle_tailscale_vpn)
         tools_btn_layout.addWidget(self.btn_toggle_vpn)
 
         self.btn_check_deps = QPushButton("⚙ Cài đặt Scrcpy/ADB")
@@ -1672,15 +1672,15 @@ class TX3ControllerApp(QMainWindow):
                 if success:
                     self.log("Tải & Giải nén Scrcpy + ADB hoàn tất thành công!", "SUCCESS")
                     self.detect_local_tools()
-                    wg_installer = os.path.join(self.tools_dir, "wireguard-installer.exe")
-                    if not os.path.exists(r"C:\Program Files\WireGuard\wireguard.exe"):
+                    wg_installer = os.path.join(self.tools_dir, "tailscale-installer.exe")
+                    if not os.path.exists(r"C:\Program Files\Tailscale\tailscale.exe"):
                         reply = QMessageBox.question(
-                            self, "Cài đặt WireGuard VPN",
-                            "Scrcpy & ADB đã cài xong!\nBạn có muốn tự động tải & cài đặt WireGuard Client cho Windows không?",
+                            self, "Cài đặt Tailscale VPN",
+                            "Scrcpy & ADB đã cài xong!\nBạn có muốn tự động tải & cài đặt Tailscale Client cho Windows không?",
                             QMessageBox.Yes | QMessageBox.No
                         )
                         if reply == QMessageBox.Yes:
-                            self.install_wireguard_win(wg_installer)
+                            self.install_tailscale_win(wg_installer)
                     else:
                         QMessageBox.information(self, "THÔNG BÁO THÀNH CÔNG", "🚀 Bộ công cụ Scrcpy & ADB đã cài đặt sẵn sàng sử dụng!")
                 else:
@@ -1692,10 +1692,10 @@ class TX3ControllerApp(QMainWindow):
         else:
             QMessageBox.information(self, "Thông báo", "Hệ thống đang chạy trên Linux/macOS. Vui lòng cài đặt scrcpy qua terminal: 'sudo apt install scrcpy adb' hoặc 'brew install scrcpy'.")
 
-    def install_wireguard_win(self, wg_dest):
-        dlg = ProgressDialog("Tải WireGuard Client Installer", self)
+    def install_tailscale_win(self, wg_dest):
+        dlg = ProgressDialog("Tải Tailscale Client Installer", self)
         dlg.show()
-        self.log("Bắt đầu tải WireGuard Windows Installer...", "INFO")
+        self.log("Bắt đầu tải Tailscale Windows Installer...", "INFO")
 
         self.wg_worker = DownloadWorker(WIREGUARD_WIN_URL, wg_dest)
         self.wg_worker.progress.connect(dlg.update_progress)
@@ -1703,37 +1703,37 @@ class TX3ControllerApp(QMainWindow):
         def on_wg_finished(success, msg):
             dlg.close()
             if success:
-                self.log("Đã tải xong WireGuard Installer. Đang mở installer...", "SUCCESS")
-                QMessageBox.information(self, "Khởi chạy Installer", "Đã tải xong WireGuard Installer! Hệ thống sẽ mở file cài đặt ngay bây giờ.")
+                self.log("Đã tải xong Tailscale Installer. Đang mở installer...", "SUCCESS")
+                QMessageBox.information(self, "Khởi chạy Installer", "Đã tải xong Tailscale Installer! Hệ thống sẽ mở file cài đặt ngay bây giờ.")
                 subprocess.Popen([wg_dest], shell=True)
             else:
-                self.log(f"Thất bại tải WireGuard Installer: {msg}", "ERROR")
-                QMessageBox.critical(self, "Lỗi tải WireGuard", msg)
+                self.log(f"Thất bại tải Tailscale Installer: {msg}", "ERROR")
+                QMessageBox.critical(self, "Lỗi tải Tailscale", msg)
 
         self.wg_worker.finished.connect(on_wg_finished)
         self.wg_worker.start()
 
-    def toggle_wireguard_vpn(self):
+    def toggle_tailscale_vpn(self):
         if sys.platform != "win32":
-            QMessageBox.information(self, "Thông báo WireGuard", "Tính năng quản lý VPN tự động chỉ hỗ trợ môi trường Windows.")
+            QMessageBox.information(self, "Thông báo Tailscale", "Tính năng quản lý VPN tự động chỉ hỗ trợ môi trường Windows.")
             return
 
-        wg_exe = r"C:\Program Files\WireGuard\wireguard.exe"
+        wg_exe = r"C:\Program Files\Tailscale\tailscale.exe"
         if not os.path.exists(wg_exe):
             reply = QMessageBox.question(
-                self, "Chưa cài WireGuard",
-                "Chưa tìm thấy ứng dụng WireGuard trên Windows!\nBạn có muốn tự động tải về cài đặt ngay bây giờ không?",
+                self, "Chưa cài Tailscale",
+                "Chưa tìm thấy ứng dụng Tailscale trên Windows!\nBạn có muốn tự động tải về cài đặt ngay bây giờ không?",
                 QMessageBox.Yes | QMessageBox.No
             )
             if reply == QMessageBox.Yes:
-                wg_installer = os.path.join(self.tools_dir, "wireguard-installer.exe")
-                self.install_wireguard_win(wg_installer)
+                wg_installer = os.path.join(self.tools_dir, "tailscale-installer.exe")
+                self.install_tailscale_win(wg_installer)
             return
 
-        wg_ip = self.get_wireguard_local_ip()
+        ts_ip = self.get_tailscale_local_ip()
 
-        if wg_ip:
-            self.log(f"WireGuard VPN đang KẾT NỐI (IP: {wg_ip}). Đang tiến hành ngắt kết nối...", "WARNING")
+        if ts_ip:
+            self.log(f"Tailscale VPN đang KẾT NỐI (IP: {ts_ip}). Đang tiến hành ngắt kết nối...", "WARNING")
             uninst_res = subprocess.run([wg_exe, "/uninstalltunnelservice", "tx3_vpn"], capture_output=True, text=True)
             out_err = (uninst_res.stdout or uninst_res.stderr or "").strip()
             
@@ -1741,17 +1741,17 @@ class TX3ControllerApp(QMainWindow):
                 self.log("❌ Lỗi quyền Windows: Cần chạy App dưới quyền Run as Administrator để bật/tắt VPN.", "ERROR")
                 QMessageBox.warning(
                     self, "Yêu cầu Quyền Administrator",
-                    "⚠️ Bật/Tắt WireGuard Service yêu cầu quyền Quản trị viên trên Windows!\n\n"
+                    "⚠️ Bật/Tắt Tailscale Service yêu cầu quyền Quản trị viên trên Windows!\n\n"
                     "👉 Vui lòng ĐÓNG phần mềm, nhấp chuột phải vào icon ứng dụng và chọn 'Run as Administrator' (Chạy với quyền quản trị viên).\n\n"
-                    "Hoặc bạn có thể mở ứng dụng WireGuard thủ công và chọn 'Deactivate'."
+                    "Hoặc bạn có thể mở ứng dụng Tailscale thủ công và chọn 'Deactivate'."
                 )
             else:
                 self.log(f"Lệnh ngắt VPN kết quả: {out_err or 'Đã ngắt service thành công.'}", "INFO")
-                QMessageBox.information(self, "WireGuard VPN Status", "🔌 Đã ngắt kết nối WireGuard VPN thành công!")
+                QMessageBox.information(self, "Tailscale VPN Status", "🔌 Đã ngắt kết nối Tailscale VPN thành công!")
                 self.detect_local_tools()
         else:
             os.makedirs(self.tools_dir, exist_ok=True)
-            # Auto-generate REAL valid WireGuard Client config matched with Server
+            # Auto-generate REAL valid Tailscale Client config matched with Server
             conf_content = """[Interface]
 PrivateKey = YB/Mputa3B92fM8Z0wiKWmPzdFh1dshmexTYqbMZvk8=
 Address = 10.88.0.250/24
@@ -1765,9 +1765,9 @@ PersistentKeepalive = 25
 """
             with open(self.vpn_conf_path, "w", encoding="utf-8") as f:
                 f.write(conf_content)
-            self.log(f"Đã cập nhật cấu hình WireGuard VPN thật tại: {self.vpn_conf_path}", "SUCCESS")
+            self.log(f"Đã cập nhật cấu hình Tailscale VPN thật tại: {self.vpn_conf_path}", "SUCCESS")
 
-            self.log(f"Đang kích hoạt Service WireGuard Tunnel từ {self.vpn_conf_path}...", "INFO")
+            self.log(f"Đang kích hoạt Service Tailscale Tunnel từ {self.vpn_conf_path}...", "INFO")
             inst_res = subprocess.run([wg_exe, "/installtunnelservice", self.vpn_conf_path], capture_output=True, text=True)
             out_msg = (inst_res.stdout or inst_res.stderr or "").strip()
 
@@ -1776,7 +1776,7 @@ PersistentKeepalive = 25
                 reply = QMessageBox.warning(
                     self, "Cần Quyền Administrator (Run as Administrator)",
                     "⚠️ Lỗi: Access is denied (Bị chối quyền hệ thống)\n\n"
-                    "Bật Service WireGuard trên Windows bắt buộc ứng dụng phải chạy dưới quyền Admin:\n"
+                    "Bật Service Tailscale trên Windows bắt buộc ứng dụng phải chạy dưới quyền Admin:\n"
                     "1️⃣ Vui lòng tắt phần mềm -> Chuột phải chọn 'Run as Administrator' để ứng dụng tự bật VPN ngầm.\n"
                     "2️⃣ Hoặc MỞ ỨNG DỤNG WIREGUARD thủ công -> Bấm 'Add Tunnel' -> Chọn file:\n"
                     f"   {self.vpn_conf_path}"
@@ -1786,7 +1786,7 @@ PersistentKeepalive = 25
                 
                 # Check IP after 2 seconds
                 QTimer.singleShot(2000, self.detect_local_tools)
-                new_ip = self.get_wireguard_local_ip() or "10.88.0.250 (Đang thiết lập...)"
+                new_ip = self.get_tailscale_local_ip() or "10.88.0.250 (Đang thiết lập...)"
 
                 QMessageBox.information(
                     self, "THÔNG BÁO KẾT NỐI WIREGUARD VPN",
@@ -1921,7 +1921,7 @@ PersistentKeepalive = 25
             self.table_devices.setItem(row, 2, mac_item)
 
             # Tailscale IP (Non-editable)
-            ts_ip = dev.get("tailscale_ip") or dev.get("wg_ip") or "Chưa có IP"
+            ts_ip = dev.get("tailscale_ip") or dev.get("ts_ip") or "Chưa có IP"
             wg_item = QTableWidgetItem(ts_ip)
             wg_item.setFlags(wg_item.flags() & ~Qt.ItemIsEditable)
             self.table_devices.setItem(row, 3, wg_item)
@@ -1999,7 +1999,7 @@ PersistentKeepalive = 25
                 writer = csv.writer(f)
                 writer.writerow([
                     "STT", "ID Thiết Bị", "Tên Box", "UUID", "Trạng Thái",
-                    "IP WireGuard", "MAC WiFi", "MAC Ethernet", "Serial",
+                    "IP Tailscale", "MAC WiFi", "MAC Ethernet", "Serial",
                     "Địa Điểm (Site)", "Phiên Bản ROM", "Cập Nhật Cuối"
                 ])
 
@@ -2007,7 +2007,7 @@ PersistentKeepalive = 25
                     status = dev.get("status", "offline").upper()
                     name = dev.get("device_name") or dev.get("device_uuid")
                     uuid = dev.get("device_uuid", "")
-                    wg_ip = dev.get("wg_ip", "")
+                    ts_ip = dev.get("ts_ip", "")
                     mac_wifi = dev.get("mac_wifi", "")
                     mac_eth = dev.get("mac_ethernet", "")
                     serial = dev.get("serial", "")
@@ -2018,7 +2018,7 @@ PersistentKeepalive = 25
 
                     writer.writerow([
                         idx, dev.get("id", ""), name, uuid, status,
-                        wg_ip, mac_wifi, mac_eth, serial,
+                        ts_ip, mac_wifi, mac_eth, serial,
                         site, rom, updated
                     ])
 
@@ -2036,13 +2036,13 @@ PersistentKeepalive = 25
             if row < len(self.devices):
                 dev = self.devices[row]
                 name = dev.get("device_name") or dev.get("device_uuid")
-                wg_ip = dev.get("wg_ip")
+                ts_ip = dev.get("ts_ip")
                 status = dev.get("status", "offline").upper()
                 selected_boxes.append({
                     "dev": dev,
                     "row": row,
                     "name": name,
-                    "ip": wg_ip,
+                    "ip": ts_ip,
                     "status": status
                 })
         return selected_boxes
@@ -2063,7 +2063,7 @@ PersistentKeepalive = 25
             box = selected_boxes[0]
             self.selected_device = box["dev"]
             name = box["name"]
-            wg_ip = box["ip"]
+            ts_ip = box["ip"]
             status = box["status"]
 
             mac_wifi = self.selected_device.get("mac_wifi")
@@ -2074,15 +2074,15 @@ PersistentKeepalive = 25
             self.txt_edit_name.setText(name)
             self.btn_save_name.setEnabled(True)
 
-            msg_detail = f"• IP WireGuard: {wg_ip or 'N/A'}\n• Địa chỉ MAC: {mac_str}\n• Serial: {self.selected_device.get('serial') or 'N/A'}"
+            msg_detail = f"• IP Tailscale: {ts_ip or 'N/A'}\n• Địa chỉ MAC: {mac_str}\n• Serial: {self.selected_device.get('serial') or 'N/A'}"
             self.lbl_selected_detail.setText(msg_detail)
 
-            is_online = (status == "ONLINE") and (wg_ip is not None)
+            is_online = (status == "ONLINE") and (ts_ip is not None)
             self.btn_remote.setText("▶ Bắt đầu Remote Scrcpy (1 Box)")
             self.btn_remote.setEnabled(is_online)
             self.btn_push.setText("⚡ Truyền File sang Box (/sdcard/Download)")
             self.btn_push.setEnabled(is_online and bool(self.txt_filepath.text().strip()))
-            self.log(f"Đã chọn thiết bị: {name} (IP: {wg_ip}, Trạng thái: {status})", "INFO")
+            self.log(f"Đã chọn thiết bị: {name} (IP: {ts_ip}, Trạng thái: {status})", "INFO")
         else:
             self.selected_device = None
             self.txt_edit_name.setText("")
@@ -2194,19 +2194,19 @@ PersistentKeepalive = 25
 
         online_boxes = [b for b in selected_boxes if b["status"] == "ONLINE" and b["ip"]]
         if not online_boxes:
-            QMessageBox.warning(self, "Lỗi", "Không có Box nào đang ONLINE và có IP WireGuard trong danh sách đã chọn!")
+            QMessageBox.warning(self, "Lỗi", "Không có Box nào đang ONLINE và có IP Tailscale trong danh sách đã chọn!")
             return
 
         if len(online_boxes) == 1:
             box = online_boxes[0]
-            wg_ip = box["ip"]
+            ts_ip = box["ip"]
             dev_name = box["name"]
 
             self.btn_remote.setEnabled(False)
-            self.statusBar.showMessage(f"Đang kết nối ADB & mở Scrcpy tới {dev_name} ({wg_ip}:5555)... ")
-            self.log(f"Khởi tạo tiến trình Remote Scrcpy tới {dev_name} ({wg_ip}:5555)...", "ADB")
+            self.statusBar.showMessage(f"Đang kết nối ADB & mở Scrcpy tới {dev_name} ({ts_ip}:5555)... ")
+            self.log(f"Khởi tạo tiến trình Remote Scrcpy tới {dev_name} ({ts_ip}:5555)...", "ADB")
 
-            self.scrcpy_worker = LaunchScrcpyWorker(wg_ip, dev_name, scrcpy_cmd=self.scrcpy_bin, adb_cmd=self.adb_bin)
+            self.scrcpy_worker = LaunchScrcpyWorker(ts_ip, dev_name, scrcpy_cmd=self.scrcpy_bin, adb_cmd=self.adb_bin)
             self.scrcpy_worker.progress.connect(lambda msg: self.log(msg, "ADB"))
             self.scrcpy_worker.finished.connect(self.on_scrcpy_finished)
             self.scrcpy_worker.start()
@@ -2244,10 +2244,10 @@ PersistentKeepalive = 25
                 self.log(f"🚀 Bắt đầu mở Remote Scrcpy ĐỒNG THỜI cho {len(online_boxes)} Box...", "INFO")
                 opened_count = 0
                 for box in online_boxes:
-                    wg_ip = box["ip"]
+                    ts_ip = box["ip"]
                     dev_name = box["name"]
-                    self.log(f"[ADB & Scrcpy] Mở cửa sổ Remote cho {dev_name} ({wg_ip}:5555)...", "ADB")
-                    worker = LaunchScrcpyWorker(wg_ip, dev_name, scrcpy_cmd=self.scrcpy_bin, adb_cmd=self.adb_bin)
+                    self.log(f"[ADB & Scrcpy] Mở cửa sổ Remote cho {dev_name} ({ts_ip}:5555)...", "ADB")
+                    worker = LaunchScrcpyWorker(ts_ip, dev_name, scrcpy_cmd=self.scrcpy_bin, adb_cmd=self.adb_bin)
                     worker.progress.connect(lambda msg: self.log(msg, "ADB"))
                     worker.start()
                     opened_count += 1
@@ -2292,10 +2292,10 @@ PersistentKeepalive = 25
         filename = os.path.basename(filepath)
         if len(online_boxes) == 1:
             box = online_boxes[0]
-            wg_ip = box["ip"]
+            ts_ip = box["ip"]
             dev_name = box["name"]
-            self.log(f"Bắt đầu truyền file '{filename}' sang Box '{dev_name}' ({wg_ip}:{remote_dir})...", "ADB")
-            self.push_worker = PushFileWorker(wg_ip, filepath, remote_dir=remote_dir, adb_cmd=self.adb_bin)
+            self.log(f"Bắt đầu truyền file '{filename}' sang Box '{dev_name}' ({ts_ip}:{remote_dir})...", "ADB")
+            self.push_worker = PushFileWorker(ts_ip, filepath, remote_dir=remote_dir, adb_cmd=self.adb_bin)
             self.push_worker.progress.connect(lambda msg: self.log(msg, "ADB"))
             self.push_worker.finished.connect(self.on_push_finished)
             self.push_worker.start()
